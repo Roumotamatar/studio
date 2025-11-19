@@ -68,7 +68,7 @@ export default function UploadForm({ onAnalysisStart, onAnalysisSuccess, onAnaly
 
 
   return (
-    <Card className="w-full transform transition-all duration-500 ease-in-out shadow-2xl bg-white/60 backdrop-blur-sm border-2 border-white">
+    <Card className="w-full transform transition-all duration-700 ease-in-out shadow-2xl bg-white/60 backdrop-blur-sm border-2 border-white animate-in fade-in-50 slide-in-from-bottom-5">
       <CardHeader className="text-center">
         <CardTitle className="text-3xl font-bold tracking-tight">Check Your Skin</CardTitle>
         <CardDescription>
