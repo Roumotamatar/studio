@@ -10,10 +10,10 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertTriangle, ListChecks, RefreshCcw } from 'lucide-react';
+import { AlertTriangle, ListChecks, RefreshCcw, Info, Sparkles } from 'lucide-react';
 import type { analyzeSkinCondition } from '@/app/actions';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 interface AnalysisResultProps {
   result: Awaited<ReturnType<typeof analyzeSkinCondition>>;
@@ -33,40 +33,49 @@ export default function AnalysisResult({ result, imagePreview, onReset }: Analys
 
   return (
     <Card className="w-full animate-in fade-in-50 duration-500">
-      <CardHeader>
-        <CardTitle className="font-headline text-2xl">Analysis Complete</CardTitle>
+      <CardHeader className="text-center">
+        <CardTitle className="text-3xl font-bold tracking-tight">Analysis Complete</CardTitle>
         <CardDescription>Here are the results from our AI analysis.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {imagePreview && (
-          <div className="overflow-hidden rounded-lg border">
-            <Image
-              src={imagePreview}
-              alt="Analyzed skin image"
-              width={500}
-              height={500}
-              className="h-auto w-full object-contain"
-            />
-          </div>
-        )}
-        <div className="space-y-4">
-          <div>
-            <h3 className="text-sm font-medium text-muted-foreground">Detected Condition</h3>
-            <p className="text-lg font-semibold text-primary">{result.classification}</p>
-          </div>
-          <Separator />
-          <div>
-            <h3 className="mb-2 text-sm font-medium text-muted-foreground">Suggested Remedies</h3>
-            <ul className="space-y-2">
-              {remediesList.map((remedy, index) => (
-                <li key={index} className="flex items-start gap-3">
-                  <ListChecks className="mt-1 h-4 w-4 shrink-0 text-accent" />
-                  <span className="text-left">{remedy}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
+        <Tabs defaultValue="overview" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="overview"><Info className="mr-2 h-4 w-4" />Overview</TabsTrigger>
+            <TabsTrigger value="remedies"><Sparkles className="mr-2 h-4 w-4" />Remedies</TabsTrigger>
+          </TabsList>
+          <TabsContent value="overview" className="mt-6">
+            <div className="space-y-6">
+              {imagePreview && (
+                <div className="overflow-hidden rounded-lg border shadow-sm">
+                  <Image
+                    src={imagePreview}
+                    alt="Analyzed skin image"
+                    width={500}
+                    height={500}
+                    className="h-auto w-full object-contain"
+                  />
+                </div>
+              )}
+              <div className="rounded-lg border bg-secondary/30 p-4 text-center">
+                <h3 className="text-sm font-medium text-muted-foreground">Detected Condition</h3>
+                <p className="text-2xl font-bold text-primary">{result.classification}</p>
+              </div>
+            </div>
+          </TabsContent>
+          <TabsContent value="remedies" className="mt-6">
+             <div className="space-y-4">
+              <h3 className="mb-2 text-lg font-semibold text-foreground">Suggested Remedies</h3>
+              <ul className="space-y-3">
+                {remediesList.map((remedy, index) => (
+                  <li key={index} className="flex items-start gap-3">
+                    <ListChecks className="mt-1 h-5 w-5 shrink-0 text-accent" />
+                    <span className="text-left text-foreground/80">{remedy}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </TabsContent>
+        </Tabs>
 
         <Alert variant="default" className="bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800">
           <AlertTriangle className="h-4 w-4 !text-yellow-600 dark:!text-yellow-400" />

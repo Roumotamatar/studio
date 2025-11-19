@@ -9,7 +9,7 @@ import AnalysisResult from '@/components/app/analysis-result';
 import ErrorDisplay from '@/components/app/error-display';
 import { useToast } from '@/hooks/use-toast';
 
-type AnalysisResult = Awaited<ReturnType<typeof analyzeSkinCondition>>;
+type AnalysisResultType = Awaited<ReturnType<typeof analyzeSkinCondition>>;
 type AnalysisState = 'idle' | 'loading' | 'success' | 'error';
 
 export default function Home() {
@@ -17,7 +17,7 @@ export default function Home() {
   const [imageData, setImageData] = useState<{
     previewUrl: string | null;
   }>({ previewUrl: null });
-  const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [result, setResult] = useState<AnalysisResultType | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -27,7 +27,7 @@ export default function Home() {
     setResult(null);
   };
   
-  const handleAnalysisSuccess = (res: AnalysisResult, previewUrl: string) => {
+  const handleAnalysisSuccess = (res: AnalysisResultType, previewUrl: string) => {
     setResult(res);
     setImageData({ previewUrl });
     setAnalysisState('success');
@@ -53,13 +53,13 @@ export default function Home() {
   return (
     <div className="flex min-h-screen w-full flex-col items-center bg-background text-foreground">
       <header className="w-full border-b">
-        <div className="container mx-auto flex h-16 items-center px-4">
+        <div className="container mx-auto flex h-20 items-center px-4">
           <Logo />
         </div>
       </header>
       <main className="flex flex-1 flex-col items-center justify-center p-4 text-center">
-        <div className="w-full max-w-xl">
-          {analysisState === 'idle' && (
+        <div className="w-full max-w-xl space-y-8">
+           {analysisState === 'idle' && (
             <UploadForm 
               onAnalysisStart={handleAnalysisStart}
               onAnalysisSuccess={handleAnalysisSuccess}
@@ -77,7 +77,7 @@ export default function Home() {
           {analysisState === 'error' && <ErrorDisplay message={error} onReset={handleReset} />}
         </div>
       </main>
-      <footer className="w-full py-4">
+      <footer className="w-full py-6">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
           <p>
             SkinWise is an AI-powered tool and does not provide medical advice.

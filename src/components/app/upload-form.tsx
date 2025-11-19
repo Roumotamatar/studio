@@ -2,7 +2,7 @@
 
 import { useState, useRef, type ChangeEvent } from 'react';
 import Image from 'next/image';
-import { Upload, Loader2, Sparkles } from 'lucide-react';
+import { Upload, Loader2, Sparkles, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -57,13 +57,21 @@ export default function UploadForm({ onAnalysisStart, onAnalysisSuccess, onAnaly
   };
 
   const triggerFileSelect = () => fileInputRef.current?.click();
+  const handleRemoveImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    if(fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
 
   return (
-    <Card className="w-full transform transition-all duration-500 ease-in-out">
-      <CardHeader>
-        <CardTitle className="font-headline text-2xl">Check Your Skin</CardTitle>
+    <Card className="w-full transform transition-all duration-500 ease-in-out shadow-xl">
+      <CardHeader className="text-center">
+        <CardTitle className="text-3xl font-bold tracking-tight">Check Your Skin</CardTitle>
         <CardDescription>
-          Upload a photo of a skin condition for an AI-powered analysis.
+          Upload a clear photo of a skin condition for an AI-powered analysis.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -74,32 +82,38 @@ export default function UploadForm({ onAnalysisStart, onAnalysisSuccess, onAnaly
           onChange={handleImageChange}
           className="hidden"
         />
-        <div
-          className="flex h-64 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-background/50 text-muted-foreground transition-colors hover:border-primary hover:bg-accent/10"
-          onClick={triggerFileSelect}
-        >
-          {imagePreview ? (
-            <Image
+
+        {!imagePreview ? (
+          <div
+            className="flex h-64 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-background/50 text-muted-foreground transition-colors hover:border-primary hover:bg-accent/10"
+            onClick={triggerFileSelect}
+          >
+            <div className="flex flex-col items-center gap-2">
+              <Upload className="h-10 w-10 text-primary" />
+              <p className='font-medium'>Click to upload an image</p>
+              <p className="text-xs">PNG, JPG, etc. up to 10MB</p>
+            </div>
+          </div>
+        ) : (
+          <div className="relative w-full h-64">
+             <Image
               src={imagePreview}
               alt="Selected skin image"
-              width={256}
-              height={256}
-              className="h-full w-full rounded-lg object-cover"
+              fill
+              className="rounded-lg object-cover"
             />
-          ) : (
-            <div className="flex flex-col items-center gap-2">
-              <Upload className="h-10 w-10" />
-              <p>Click to upload an image</p>
-              <p className="text-xs">PNG, JPG, etc.</p>
+            <div className="absolute inset-0 bg-black/40 rounded-lg flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+              <Button variant="secondary" onClick={triggerFileSelect}>Change Image</Button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
       </CardContent>
-      <CardFooter>
+      <CardFooter className="flex-col gap-4">
         <Button
           onClick={handleAnalyzeClick}
           disabled={!imageFile || isAnalyzing}
-          className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
+          className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
           size="lg"
         >
           {isAnalyzing ? (
@@ -110,10 +124,19 @@ export default function UploadForm({ onAnalysisStart, onAnalysisSuccess, onAnaly
           ) : (
             <>
               <Sparkles className="mr-2 h-5 w-5" />
-              Analyze
+              Analyze My Skin
             </>
           )}
         </Button>
+        {imagePreview && !isAnalyzing && (
+            <Button
+              onClick={handleRemoveImage}
+              variant="link"
+              className="text-muted-foreground"
+            >
+              Remove Image
+            </Button>
+        )}
       </CardFooter>
     </Card>
   );
