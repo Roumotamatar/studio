@@ -26,40 +26,14 @@ const SuggestRemediesOutputSchema = z.object({
 
 export type SuggestRemediesOutput = z.infer<typeof SuggestRemediesOutputSchema>;
 
-const shouldIncludeAdditionalInfoTool = ai.defineTool({
-  name: 'shouldIncludeAdditionalInfo',
-  description: 'Determines whether a specific piece of information should be included in the model\'s generated response.',
-  inputSchema: z.object({
-    infoType: z.string().describe('The type of information to consider including.'),
-    detectedCondition: z.string().describe('The detected skin condition.'),
-  }),
-  outputSchema: z.boolean().describe('Whether or not to include the information.'),
-}, async (input) => {
-  // In a real application, this would involve a more complex decision-making process.
-  // For this example, we'll just include the information if the condition contains certain keywords.
-  const {
-    infoType,
-    detectedCondition
-  } = input;
-  if (infoType === 'Severity' && detectedCondition.toLowerCase().includes('severe')) {
-    return true;
-  }
-  return false;
-});
-
 const suggestRemediesPrompt = ai.definePrompt({
   name: 'suggestRemediesPrompt',
   input: {schema: SuggestRemediesInputSchema},
   output: {schema: SuggestRemediesOutputSchema},
-  tools: [shouldIncludeAdditionalInfoTool],
-  prompt: `You are a helpful dermatology assistant. You will suggest remedies and treatments for the detected skin condition.
-
-  Detected Skin Condition: {{{detectedCondition}}}
-
-  Use the shouldIncludeAdditionalInfoTool to check if you should include information for severe cases. If it returns true, add a section for severe cases.
-
-  Suggested Remedies:
-  `,
+  system: `You are a helpful dermatology assistant. You will suggest remedies and treatments for the detected skin condition.`,
+  prompt: `Detected Skin Condition: {{{detectedCondition}}}
+  
+  Provide a list of suggested remedies and treatments for the condition above. If the condition sounds severe, include a note about seeking professional medical advice for severe cases.`,
 });
 
 
