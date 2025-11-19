@@ -56,9 +56,7 @@ const suggestRemediesPrompt = ai.definePrompt({
 
   Detected Skin Condition: {{{detectedCondition}}}
 
-  Consider the severity of the condition before suggesting remedies.
-
-  {{#if (shouldIncludeAdditionalInfoTool infoType="Severity" detectedCondition=detectedCondition)}}Include information about severe cases.{{/if}}
+  Use the shouldIncludeAdditionalInfoTool to check if you should include information for severe cases. If it returns true, add a section for severe cases.
 
   Suggested Remedies:
   `,
