@@ -2,7 +2,7 @@
 
 import { useState, useRef, type ChangeEvent } from 'react';
 import Image from 'next/image';
-import { Upload, Loader2, Sparkles, Image as ImageIcon } from 'lucide-react';
+import { Upload, Loader2, Sparkles, Image as ImageIcon, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -57,7 +57,8 @@ export default function UploadForm({ onAnalysisStart, onAnalysisSuccess, onAnaly
   };
 
   const triggerFileSelect = () => fileInputRef.current?.click();
-  const handleRemoveImage = () => {
+  const handleRemoveImage = (e: React.MouseEvent) => {
+    e.stopPropagation();
     setImageFile(null);
     setImagePreview(null);
     if(fileInputRef.current) {
@@ -67,7 +68,7 @@ export default function UploadForm({ onAnalysisStart, onAnalysisSuccess, onAnaly
 
 
   return (
-    <Card className="w-full transform transition-all duration-500 ease-in-out shadow-xl">
+    <Card className="w-full transform transition-all duration-500 ease-in-out shadow-2xl bg-white/60 backdrop-blur-sm border-2 border-white">
       <CardHeader className="text-center">
         <CardTitle className="text-3xl font-bold tracking-tight">Check Your Skin</CardTitle>
         <CardDescription>
@@ -83,37 +84,45 @@ export default function UploadForm({ onAnalysisStart, onAnalysisSuccess, onAnaly
           className="hidden"
         />
 
-        {!imagePreview ? (
-          <div
-            className="flex h-64 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-background/50 text-muted-foreground transition-colors hover:border-primary hover:bg-accent/10"
+        <div
+            className="flex h-64 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-primary/30 bg-primary/5 text-muted-foreground transition-colors hover:border-primary hover:bg-primary/10"
             onClick={triggerFileSelect}
           >
-            <div className="flex flex-col items-center gap-2">
+          {!imagePreview ? (
+            <div className="flex flex-col items-center gap-2 text-center">
               <Upload className="h-10 w-10 text-primary" />
-              <p className='font-medium'>Click to upload an image</p>
+              <p className='font-medium text-primary'>Click to upload an image</p>
               <p className="text-xs">PNG, JPG, etc. up to 10MB</p>
             </div>
-          </div>
-        ) : (
-          <div className="relative w-full h-64">
-             <Image
-              src={imagePreview}
-              alt="Selected skin image"
-              fill
-              className="rounded-lg object-cover"
-            />
-            <div className="absolute inset-0 bg-black/40 rounded-lg flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-              <Button variant="secondary" onClick={triggerFileSelect}>Change Image</Button>
+          ) : (
+            <div className="relative w-full h-full">
+               <Image
+                src={imagePreview}
+                alt="Selected skin image"
+                fill
+                className="rounded-lg object-cover"
+              />
+              <div className="absolute inset-0 bg-black/40 rounded-lg flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                <Button variant="secondary" onClick={triggerFileSelect}>Change Image</Button>
+              </div>
+               <Button
+                variant="destructive"
+                size="icon"
+                className="absolute top-2 right-2 h-8 w-8 rounded-full"
+                onClick={handleRemoveImage}
+              >
+                <X className="h-4 w-4" />
+              </Button>
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
       </CardContent>
       <CardFooter className="flex-col gap-4">
         <Button
           onClick={handleAnalyzeClick}
           disabled={!imageFile || isAnalyzing}
-          className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+          className="w-full"
           size="lg"
         >
           {isAnalyzing ? (
@@ -128,15 +137,6 @@ export default function UploadForm({ onAnalysisStart, onAnalysisSuccess, onAnaly
             </>
           )}
         </Button>
-        {imagePreview && !isAnalyzing && (
-            <Button
-              onClick={handleRemoveImage}
-              variant="link"
-              className="text-muted-foreground"
-            >
-              Remove Image
-            </Button>
-        )}
       </CardFooter>
     </Card>
   );

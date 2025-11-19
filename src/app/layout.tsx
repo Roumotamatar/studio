@@ -23,7 +23,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
       <body className={cn(
-        "min-h-screen bg-background font-sans antialiased",
+        "min-h-screen bg-background font-sans antialiased bg-gradient-to-br from-primary/10 via-background to-accent/10",
         fontSans.variable
       )}>
         {children}
