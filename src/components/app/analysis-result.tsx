@@ -71,7 +71,7 @@ export default function AnalysisResult({ result, imagePreview, onReset }: Analys
           <TabsContent value="remedies" className="mt-6">
              <div className="space-y-4 text-left">
               <h3 className="mb-4 text-2xl font-semibold text-foreground text-center">Suggested Remedies</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-4">
                   {remediesList.map((remedy, index) => (
                     <Card key={index} className="bg-white/70">
                       <CardHeader className="flex flex-row items-center gap-3 space-y-0 p-4">
