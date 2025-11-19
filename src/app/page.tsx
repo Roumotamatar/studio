@@ -51,14 +51,14 @@ export default function Home() {
   };
 
   return (
-    <div className="flex min-h-screen w-full flex-col items-center bg-background text-foreground">
-      <header className="w-full border-b">
+    <div className="flex min-h-screen w-full flex-col items-center text-foreground">
+      <header className="w-full border-b border-white/20">
         <div className="container mx-auto flex h-20 items-center px-4">
           <Logo />
         </div>
       </header>
       <main className="flex flex-1 flex-col items-center justify-center p-4 text-center">
-        <div className="w-full max-w-xl space-y-8">
+        <div className="w-full max-w-2xl space-y-8">
            {analysisState === 'idle' && (
             <UploadForm 
               onAnalysisStart={handleAnalysisStart}
@@ -78,7 +78,7 @@ export default function Home() {
         </div>
       </main>
       <footer className="w-full py-6">
-        <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
+        <div className="container mx-auto px-4 text-center text-sm text-gray-700">
           <p>
             SkinWise is an AI-powered tool and does not provide medical advice.
             Consult a healthcare professional for any health concerns.
