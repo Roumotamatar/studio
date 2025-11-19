@@ -58,7 +58,7 @@ const suggestRemediesPrompt = ai.definePrompt({
 
   Consider the severity of the condition before suggesting remedies.
 
-  {% if shouldIncludeAdditionalInfoTool({ infoType: \"Severity\", detectedCondition: detectedCondition }) %}Include information about severe cases.{% endif %}
+  {{#if (shouldIncludeAdditionalInfoTool infoType="Severity" detectedCondition=detectedCondition)}}Include information about severe cases.{{/if}}
 
   Suggested Remedies:
   `,
