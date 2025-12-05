@@ -1,0 +1,238 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the SkinWise application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user entity."
+        },
+        "email": {
+          "type": "string",
+          "description": "User's email address.",
+          "format": "email"
+        },
+        "firstName": {
+          "type": "string",
+          "description": "User's first name."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "User's last name."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the user account was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "firstName",
+        "lastName",
+        "createdAt"
+      ]
+    },
+    "SkinImage": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "SkinImage",
+      "type": "object",
+      "description": "Represents a skin image uploaded by a user for disease classification.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the skin image entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N SkinImage)"
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "URL of the uploaded skin image.",
+          "format": "uri"
+        },
+        "uploadDate": {
+          "type": "string",
+          "description": "Date and time when the image was uploaded.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "imageUrl",
+        "uploadDate"
+      ]
+    },
+    "Diagnosis": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Diagnosis",
+      "type": "object",
+      "description": "Represents the diagnosis result of a skin image.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the diagnosis entity."
+        },
+        "skinImageId": {
+          "type": "string",
+          "description": "Reference to SkinImage. (Relationship: SkinImage 1:1 Diagnosis)"
+        },
+        "diseaseName": {
+          "type": "string",
+          "description": "Name of the diagnosed skin disease."
+        },
+        "confidenceLevel": {
+          "type": "number",
+          "description": "Confidence level of the diagnosis (e.g., 0.85 for 85%)."
+        },
+        "diagnosisDate": {
+          "type": "string",
+          "description": "Date and time when the diagnosis was made.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "skinImageId",
+        "diseaseName",
+        "confidenceLevel",
+        "diagnosisDate"
+      ]
+    },
+    "Remedy": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Remedy",
+      "type": "object",
+      "description": "Represents a suggested remedy for a diagnosed skin disease.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the remedy entity."
+        },
+        "diagnosisId": {
+          "type": "string",
+          "description": "Reference to Diagnosis. (Relationship: Diagnosis 1:N Remedy)"
+        },
+        "remedyText": {
+          "type": "string",
+          "description": "Text describing the suggested remedy."
+        },
+        "source": {
+          "type": "string",
+          "description": "Source of the remedy suggestion (e.g., medical website, doctor)."
+        }
+      },
+      "required": [
+        "id",
+        "diagnosisId",
+        "remedyText",
+        "source"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profiles. The userId is used as document ID. Only the authenticated user can access their own profile.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/skinImages/{skinImageId}",
+        "definition": {
+          "entityName": "SkinImage",
+          "schema": {
+            "$ref": "#/backend/entities/SkinImage"
+          },
+          "description": "Stores skin images uploaded by a specific user. The skinImageId is the document ID. Only the user who owns the skinImage can access it.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "skinImageId",
+              "description": "The unique identifier of the skin image."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/skinImages/{skinImageId}/diagnoses/{diagnosisId}",
+        "definition": {
+          "entityName": "Diagnosis",
+          "schema": {
+            "$ref": "#/backend/entities/Diagnosis"
+          },
+          "description": "Stores diagnoses for a specific skin image uploaded by a user.  The diagnosisId is used as the document ID. Only the user who uploaded the skin image can access its diagnoses.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "skinImageId",
+              "description": "The unique identifier of the skin image."
+            },
+            {
+              "name": "diagnosisId",
+              "description": "The unique identifier of the diagnosis."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/skinImages/{skinImageId}/diagnoses/{diagnosisId}/remedies/{remedyId}",
+        "definition": {
+          "entityName": "Remedy",
+          "schema": {
+            "$ref": "#/backend/entities/Remedy"
+          },
+          "description": "Stores remedies for a specific diagnosis of a skin image uploaded by a user. The remedyId is used as the document ID.  Only the user who uploaded the skin image can access the remedies associated with its diagnoses.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "skinImageId",
+              "description": "The unique identifier of the skin image."
+            },
+            {
+              "name": "diagnosisId",
+              "description": "The unique identifier of the diagnosis."
+            },
+            {
+              "name": "remedyId",
+              "description": "The unique identifier of the remedy."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore data structure is designed to support the SkinWise application's core features: image upload, disease classification, and remedy suggestion.  The structure emphasizes authorization independence and facilitates secure list operations by leveraging path-based ownership for user-specific data. The root `/users/{userId}` collection stores user profiles, ensuring that user data is isolated and only accessible by the authenticated user. The `skinImages` subcollection stores images uploaded by the user. Each image is associated with a diagnosis and remedies. This structure provides a clear path-based ownership model, enhancing security and simplifying rules. No `get()` calls are required in security rules. The structure facilitates QAPs, as list operations are naturally scoped to the user. All documents within a collection share the same security requirements (homogeneous security posture). The `userId` is used to scope all data, allowing for simple rules such as `request.auth.uid == userId`. It includes the use of nested collections to represent one-to-many relationships, such as a user having multiple skin images and each diagnosis having multiple remedies."
+  }
+}

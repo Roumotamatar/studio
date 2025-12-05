@@ -1,0 +1,180 @@
+/**
+ * Core Philosophy: This ruleset enforces a strict user-ownership model. All data is considered private and is partitioned
+ * under a user-specific path. A user can only access data that exists within their own data tree, ensuring strong
+ * isolation between users.
+ *
+ * Data Structure: The database is organized hierarchically, starting with a top-level `users` collection. All subsequent
+ * data, such as `skinImages`, `diagnoses`, and `remedies`, are stored in nested subcollections under the specific
+ * user's document (`/users/{userId}`). This path-based ownership is the foundation of the security model.
+ *
+ * Key Security Decisions:
+ * - User Isolation: The primary rule for any data access is `request.auth.uid == userId`, ensuring users can only
+ *   interact with their own documents.
+ * - No User Enumeration: Listing documents from the top-level `/users` collection is explicitly disallowed to prevent
+ *   any user from discovering the identities of other users on the platform.
+ * - Path-Based Security: This model relies entirely on the document path for authorization. This is highly performant
+ *   as it avoids the need for extra database reads (`get()` or `exists()`) within the rules themselves to check
+ *   permissions on related documents.
+ * - Write Integrity: On creation, documents must contain an ID field that links back to their parent in the path
+ *   (e.g., a SkinImage document must have a `userId` field matching the `userId` in its path). These relational
+ *   fields are then enforced as immutable on update to maintain data integrity.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------------- HELPER FUNCTIONS ----------------
+
+    /**
+     * Checks if the user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Validates that the requesting user's UID matches the document's owner ID from the path.
+     * This is the cornerstone of the user-ownership model.
+     * @param userId The user ID from the wildcard path.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * Ensures an operation is performed by the owner on a document that already exists.
+     * Critical for preventing modification or deletion of non-existent documents.
+     * @param userId The user ID from the wildcard path.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * On create, validates that the User document's internal `id` matches the document ID.
+     */
+    function hasValidUserDataOnCreate(userId) {
+      return request.resource.data.id == userId;
+    }
+
+    /**
+     * On update, ensures the User document's `id` field is immutable.
+     */
+    function isUserDataImmutableOnUpdate() {
+      return request.resource.data.id == resource.data.id;
+    }
+
+    /**
+     * On create, validates that the SkinImage document's internal `userId` matches the user ID in the path.
+     */
+    function hasValidSkinImageDataOnCreate(userId) {
+      return request.resource.data.userId == userId;
+    }
+
+    /**
+     * On update, ensures the SkinImage document's `userId` field is immutable.
+     */
+    function isSkinImageDataImmutableOnUpdate() {
+      return request.resource.data.userId == resource.data.userId;
+    }
+
+    /**
+     * On create, validates that the Diagnosis's internal `skinImageId` matches the ID in the path.
+     */
+    function hasValidDiagnosisDataOnCreate(skinImageId) {
+      return request.resource.data.skinImageId == skinImageId;
+    }
+
+    /**
+     * On update, ensures the Diagnosis's `skinImageId` field is immutable.
+     */
+    function isDiagnosisDataImmutableOnUpdate() {
+      return request.resource.data.skinImageId == resource.data.skinImageId;
+    }
+
+    /**
+     * On create, validates that the Remedy's internal `diagnosisId` matches the ID in the path.
+     */
+    function hasValidRemedyDataOnCreate(diagnosisId) {
+      return request.resource.data.diagnosisId == diagnosisId;
+    }
+
+    /**
+     * On update, ensures the Remedy's `diagnosisId` field is immutable.
+     */
+    function isRemedyDataImmutableOnUpdate() {
+      return request.resource.data.diagnosisId == resource.data.diagnosisId;
+    }
+
+
+    // ---------------- COLLECTION RULES ----------------
+
+    /**
+     * @description Manages user profile documents.
+     * @path /users/{userId}
+     * @allow (get) A user `uid: abc` can read their own profile at `/users/abc`.
+     * @allow (create) A new user `uid: abc` can create their profile document at `/users/abc`.
+     * @deny (list) A user cannot list all documents in the `/users` collection.
+     * @deny (get) A user `uid: xyz` cannot read the profile of user `abc` at `/users/abc`.
+     * @principle Restricts access to a user's own data tree and prevents user enumeration.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isOwner(userId) && hasValidUserDataOnCreate(userId);
+      allow update: if isExistingOwner(userId) && isUserDataImmutableOnUpdate();
+      allow delete: if isExistingOwner(userId);
+
+      /**
+       * @description Stores skin images uploaded by a user.
+       * @path /users/{userId}/skinImages/{skinImageId}
+       * @allow (list) A user `uid: abc` can list all their images at `/users/abc/skinImages`.
+       * @allow (create) A user `uid: abc` can create a new image document in their own subcollection.
+       * @deny (get) A user `uid: xyz` cannot read an image from `/users/abc/skinImages/{skinImageId}`.
+       * @deny (update) A user `uid: xyz` cannot update an image owned by user `abc`.
+       * @principle Enforces document ownership for all operations within a user's private subcollection.
+       */
+      match /skinImages/{skinImageId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && hasValidSkinImageDataOnCreate(userId);
+        allow update: if isExistingOwner(userId) && isSkinImageDataImmutableOnUpdate();
+        allow delete: if isExistingOwner(userId);
+
+        /**
+         * @description Stores diagnosis results for a specific skin image.
+         * @path /users/{userId}/skinImages/{skinImageId}/diagnoses/{diagnosisId}
+         * @allow (list) A user `uid: abc` can list diagnoses for their own image.
+         * @allow (create) A user `uid: abc` can add a diagnosis to their own image.
+         * @deny (get) A user `uid: xyz` cannot read a diagnosis for an image owned by user `abc`.
+         * @deny (delete) A user `uid: xyz` cannot delete a diagnosis owned by user `abc`.
+         * @principle Inherits ownership from the parent path, ensuring only the data owner can access nested information.
+         */
+        match /diagnoses/{diagnosisId} {
+          allow get: if isOwner(userId);
+          allow list: if isOwner(userId);
+          allow create: if isOwner(userId) && hasValidDiagnosisDataOnCreate(skinImageId);
+          allow update: if isExistingOwner(userId) && isDiagnosisDataImmutableOnUpdate();
+          allow delete: if isExistingOwner(userId);
+
+          /**
+           * @description Stores remedy suggestions for a specific diagnosis.
+           * @path /users/{userId}/skinImages/{skinImageId}/diagnoses/{diagnosisId}/remedies/{remedyId}
+           * @allow (list) A user `uid: abc` can list remedies for their own diagnosis.
+           * @allow (create) A user `uid: abc` can add a remedy to their own diagnosis.
+           * @deny (get) A user `uid: xyz` cannot read a remedy for a diagnosis owned by user `abc`.
+           * @deny (update) A user `uid: xyz` cannot update a remedy owned by user `abc`.
+           * @principle Secures deeply nested data by consistently applying path-based ownership rules.
+           */
+          match /remedies/{remedyId} {
+            allow get: if isOwner(userId);
+            allow list: if isOwner(userId);
+            allow create: if isOwner(userId) && hasValidRemedyDataOnCreate(diagnosisId);
+            allow update: if isExistingOwner(userId) && isRemedyDataImmutableOnUpdate();
+            allow delete: if isExistingOwner(userId);
+          }
+        }
+      }
+    }
+  }
+}
