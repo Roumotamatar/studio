@@ -69,24 +69,21 @@ export default function LoginPage() {
 
   const handleAuthAction = async (action: 'signIn' | 'signUp', data: FormValues) => {
     setIsLoading(true);
-    try {
-      if (action === 'signIn') {
-        initiateEmailSignIn(auth, data.email, data.password);
-      } else {
-        initiateEmailSignUp(auth, data.email, data.password);
-      }
+    
+    const onAuthSuccess = () => {
       toast({
         title: 'Success!',
         description: `You have been ${action === 'signIn' ? 'signed in' : 'signed up'}. Redirecting...`,
       });
       // The onAuthStateChanged listener in FirebaseProvider will handle the redirect
-    } catch (error) {
-      const firebaseError = error as FirebaseError;
-      let errorMessage = 'An unexpected error occurred. Please try again.';
+    };
 
-      switch (firebaseError.code) {
+    const onAuthError = (error: FirebaseError) => {
+      let errorMessage = 'An unexpected error occurred. Please try again.';
+      switch (error.code) {
         case 'auth/user-not-found':
         case 'auth/wrong-password':
+        case 'auth/invalid-credential':
           errorMessage = 'Invalid email or password.';
           break;
         case 'auth/email-already-in-use':
@@ -103,6 +100,12 @@ export default function LoginPage() {
         description: errorMessage,
       });
       setIsLoading(false);
+    };
+
+    if (action === 'signIn') {
+      initiateEmailSignIn(auth, data.email, data.password, onAuthSuccess, onAuthError);
+    } else {
+      initiateEmailSignUp(auth, data.email, data.password, onAuthSuccess, onAuthError);
     }
   };
 
