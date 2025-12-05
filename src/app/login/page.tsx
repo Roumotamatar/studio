@@ -22,16 +22,19 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Logo } from '@/components/app/logo';
-import { Loader2, LogIn, UserPlus } from 'lucide-react';
+import { Loader2, LogIn, UserPlus, Phone } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useFirebase } from '@/firebase';
 import { 
   initiateEmailSignUp,
   initiateEmailSignIn,
   initiateGoogleSignIn,
+  setupRecaptcha,
+  initiatePhoneSignIn,
 } from '@/firebase/non-blocking-login';
 import { FirebaseError } from 'firebase/app';
 import { Separator } from '@/components/ui/separator';
+import type { ConfirmationResult, RecaptchaVerifier } from 'firebase/auth';
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="24px" height="24px" {...props}>
@@ -42,28 +45,49 @@ const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
     </svg>
   );
 
-const formSchema = z.object({
+const emailFormSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
 });
+const phoneFormSchema = z.object({
+  phoneNumber: z.string().min(10, { message: 'Please enter a valid phone number with country code.' }),
+});
+const codeFormSchema = z.object({
+  code: z.string().length(6, { message: 'Verification code must be 6 digits.' }),
+});
 
-type FormValues = z.infer<typeof formSchema>;
-type AuthAction = 'signin' | 'signup';
+
+type EmailFormValues = z.infer<typeof emailFormSchema>;
+type PhoneFormValues = z.infer<typeof phoneFormSchema>;
+type CodeFormValues = z.infer<typeof codeFormSchema>;
+
+type AuthAction = 'signin' | 'signup' | 'phone';
+type PhoneAuthState = 'enter-phone' | 'enter-code';
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [authAction, setAuthAction] = useState<AuthAction>('signin');
+  const [phoneAuthState, setPhoneAuthState] = useState<PhoneAuthState>('enter-phone');
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+  const [recaptcha, setRecaptcha] = useState<RecaptchaVerifier | null>(null);
+
+
   const { toast } = useToast();
   const router = useRouter();
   const { auth, isUserLoading, user } = useFirebase();
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      email: '',
-      password: '',
-    },
+  const emailForm = useForm<EmailFormValues>({
+    resolver: zodResolver(emailFormSchema),
+    defaultValues: { email: '', password: '' },
+  });
+  const phoneForm = useForm<PhoneFormValues>({
+    resolver: zodResolver(phoneFormSchema),
+    defaultValues: { phoneNumber: '' },
+  });
+  const codeForm = useForm<CodeFormValues>({
+    resolver: zodResolver(codeFormSchema),
+    defaultValues: { code: '' },
   });
 
   useEffect(() => {
@@ -71,6 +95,14 @@ export default function LoginPage() {
       router.push('/');
     }
   }, [user, isUserLoading, router]);
+
+   // Setup reCAPTCHA on component mount
+   useEffect(() => {
+    if (auth && authAction === 'phone' && !recaptcha) {
+      const verifier = setupRecaptcha(auth, 'recaptcha-container');
+      setRecaptcha(verifier);
+    }
+  }, [auth, authAction, recaptcha]);
 
   if (isUserLoading || user) {
     return (
@@ -100,6 +132,18 @@ export default function LoginPage() {
       case 'auth/popup-closed-by-user':
           errorMessage = 'The sign-in window was closed. Please try again.';
           break;
+      case 'auth/invalid-phone-number':
+        errorMessage = 'The phone number is not valid.';
+        break;
+      case 'auth/too-many-requests':
+        errorMessage = 'Too many requests. Please try again later.';
+        break;
+      case 'auth/code-expired':
+        errorMessage = 'The verification code has expired. Please request a new one.';
+        break;
+      case 'auth/invalid-verification-code':
+        errorMessage = 'Invalid verification code. Please try again.';
+        break;
     }
     
     toast({
@@ -108,20 +152,16 @@ export default function LoginPage() {
       description: errorMessage,
     });
 
+    setIsLoading(false);
     if (googleSignIn) {
       setIsGoogleLoading(false);
-    } else {
-      setIsLoading(false);
     }
   };
 
-  const handleEmailAuthAction = (data: FormValues) => {
+  const handleEmailAuthAction = (data: EmailFormValues) => {
     setIsLoading(true);
     
-    const onSignInSuccess = () => {
-      setIsLoading(false);
-    };
-
+    const onSignInSuccess = () => setIsLoading(false);
     const onSignUpSuccess = () => {
       toast({
         title: 'Success!',
@@ -139,73 +179,189 @@ export default function LoginPage() {
     }
   };
 
-  const handleGoogleSignIn = () => {
-    setIsGoogleLoading(true);
-    const onSuccess = () => {
-      setIsGoogleLoading(false);
-    };
-    initiateGoogleSignIn(auth, onSuccess, (err) => handleAuthError(err, true));
+  const handleSendCode = (data: PhoneFormValues) => {
+    if (!recaptcha) {
+      toast({ variant: 'destructive', title: 'Error', description: 'reCAPTCHA not initialized. Please refresh.' });
+      return;
+    }
+    setIsLoading(true);
+    initiatePhoneSignIn(auth, data.phoneNumber, recaptcha, (result) => {
+      setConfirmationResult(result);
+      setPhoneAuthState('enter-code');
+      setIsLoading(false);
+      toast({ title: 'Verification Code Sent', description: 'Check your phone for the SMS code.' });
+    }, (err) => handleAuthError(err));
   };
 
-  const isSigningIn = authAction === 'signin';
+  const handleVerifyCode = (data: CodeFormValues) => {
+    if (!confirmationResult) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Cannot verify code. Please try sending it again.' });
+      return;
+    }
+    setIsLoading(true);
+    confirmationResult.confirm(data.code)
+      .then(() => setIsLoading(false))
+      .catch((err) => handleAuthError(err));
+  };
+
+  const handleGoogleSignIn = () => {
+    setIsGoogleLoading(true);
+    const onSuccess = () => setIsGoogleLoading(false);
+    initiateGoogleSignIn(auth, onSuccess, (err) => handleAuthError(err, true));
+  };
+  
+  const renderEmailForm = () => (
+    <>
+      <Form {...emailForm}>
+        <form onSubmit={emailForm.handleSubmit(handleEmailAuthAction)} className="space-y-4">
+            <FormField
+              control={emailForm.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter your email here" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={emailForm.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Password</FormLabel>
+                  <FormControl>
+                    <Input type="password" placeholder="••••••••" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button 
+              type="submit" 
+              className="w-full" 
+              disabled={isLoading || isGoogleLoading}
+            >
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {authAction === 'signin' ? (
+                  <> <LogIn className="mr-2 h-4 w-4" /> Sign In</>
+              ) : (
+                  <> <UserPlus className="mr-2 h-4 w-4" /> Create Account</>
+              )}
+            </Button>
+        </form>
+      </Form>
+      <div className="mt-6 text-center text-sm">
+        {authAction === 'signin' ? (
+          <>
+            Don't have an account?{' '}
+            <Button variant="link" className="p-0 h-auto" onClick={() => setAuthAction('signup')}>
+              Sign Up
+            </Button>
+          </>
+        ) : (
+          <>
+            Already have an account?{' '}
+            <Button variant="link" className="p-0 h-auto" onClick={() => setAuthAction('signin')}>
+              Sign In
+            </Button>
+          </>
+        )}
+      </div>
+    </>
+  );
+
+  const renderPhoneForm = () => {
+    if (phoneAuthState === 'enter-code') {
+      return (
+        <Form {...codeForm}>
+          <form onSubmit={codeForm.handleSubmit(handleVerifyCode)} className="space-y-4">
+            <FormField
+              control={codeForm.control}
+              name="code"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Verification Code</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter 6-digit code" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Verify Code
+            </Button>
+            <Button variant="link" className="p-0 h-auto w-full" onClick={() => setPhoneAuthState('enter-phone')}>
+                Go back to phone number entry
+            </Button>
+          </form>
+        </Form>
+      );
+    }
+
+    return (
+      <Form {...phoneForm}>
+        <form onSubmit={phoneForm.handleSubmit(handleSendCode)} className="space-y-4">
+          <FormField
+            control={phoneForm.control}
+            name="phoneNumber"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Phone Number</FormLabel>
+                <FormControl>
+                  <Input placeholder="+1 123 456 7890" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Send Verification Code
+          </Button>
+        </form>
+      </Form>
+    );
+  };
+
+  const getTitle = () => {
+    if (authAction === 'phone') return 'Sign In with Phone';
+    if (authAction === 'signup') return 'Create an Account';
+    return 'Welcome Back!';
+  };
+
+  const getDescription = () => {
+    if (authAction === 'phone') {
+        if(phoneAuthState === 'enter-code') return 'Enter the code sent to your phone.';
+        return 'Enter your phone number to receive a verification code.';
+    }
+    if (authAction === 'signup') return 'Your personal AI-powered skin health assistant.';
+    return 'Sign in to access your dashboard.';
+  };
+
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-4">
+       <div id="recaptcha-container" className="my-4"></div>
        <div className="absolute top-8 left-8">
           <Logo />
         </div>
       <Card className="w-full max-w-md shadow-2xl bg-background/80 backdrop-blur-sm border-2 border-white">
         <CardHeader className="text-center">
           <CardTitle className="text-3xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-accent to-orange-400">
-             {isSigningIn ? 'Welcome Back!' : 'Create an Account'}
+             {getTitle()}
           </CardTitle>
           <CardDescription>
-            {isSigningIn ? 'Sign in to access your dashboard.' : 'Your personal AI-powered skin health assistant.'}
+            {getDescription()}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleEmailAuthAction)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter your email here" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Password</FormLabel>
-                      <FormControl>
-                        <Input type="password" placeholder="••••••••" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <Button 
-                  type="submit" 
-                  className="w-full" 
-                  disabled={isLoading || isGoogleLoading}
-                >
-                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {isSigningIn ? (
-                      <> <LogIn className="mr-2 h-4 w-4" /> Sign In</>
-                  ) : (
-                      <> <UserPlus className="mr-2 h-4 w-4" /> Create Account</>
-                  )}
-                </Button>
-            </form>
-          </Form>
+          {authAction === 'phone' ? renderPhoneForm() : renderEmailForm()}
            <div className="mt-6">
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
@@ -217,36 +373,28 @@ export default function LoginPage() {
                     </span>
                   </div>
                 </div>
-                <Button 
-                  variant="outline" 
-                  className="w-full mt-4" 
-                  onClick={handleGoogleSignIn}
-                  disabled={isGoogleLoading || isLoading}
-                >
-                  {isGoogleLoading ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <GoogleIcon className="mr-2 h-5 w-5" />
-                  )}
-                  Sign in with Google
-                </Button>
-              </div>
-              <div className="mt-6 text-center text-sm">
-                  {isSigningIn ? (
-                      <>
-                        Don't have an account?{' '}
-                        <Button variant="link" className="p-0 h-auto" onClick={() => setAuthAction('signup')}>
-                          Sign Up
-                        </Button>
-                      </>
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                  <Button 
+                    variant="outline" 
+                    onClick={handleGoogleSignIn}
+                    disabled={isGoogleLoading || isLoading}
+                  >
+                    {isGoogleLoading ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
-                      <>
-                        Already have an account?{' '}
-                        <Button variant="link" className="p-0 h-auto" onClick={() => setAuthAction('signin')}>
-                          Sign In
-                        </Button>
-                      </>
+                      <GoogleIcon className="mr-2 h-5 w-5" />
                     )}
+                    Google
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setAuthAction(authAction === 'phone' ? 'signin' : 'phone')}
+                    disabled={isLoading || isGoogleLoading}
+                  >
+                    <Phone className="mr-2 h-5 w-5" />
+                    {authAction === 'phone' ? 'Email' : 'Phone'}
+                  </Button>
+                </div>
               </div>
         </CardContent>
       </Card>
