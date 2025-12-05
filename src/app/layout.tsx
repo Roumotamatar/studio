@@ -3,6 +3,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import { Inter as FontSans } from "next/font/google"
 import { cn } from "@/lib/utils"
+import { FirebaseClientProvider } from '@/firebase';
 
 const fontSans = FontSans({
   subsets: ["latin"],
@@ -26,9 +27,11 @@ export default function RootLayout({
         "min-h-screen bg-background font-sans antialiased animated-gradient",
         fontSans.variable
       )}>
-        <div className="min-h-screen bg-white/50 backdrop-blur-sm">
-          {children}
-        </div>
+        <FirebaseClientProvider>
+          <div className="min-h-screen bg-white/50 backdrop-blur-sm">
+            {children}
+          </div>
+        </FirebaseClientProvider>
         <Toaster />
       </body>
     </html>

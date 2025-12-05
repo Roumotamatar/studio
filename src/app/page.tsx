@@ -8,11 +8,19 @@ import LoadingIndicator from '@/components/app/loading-indicator';
 import AnalysisResult from '@/components/app/analysis-result';
 import ErrorDisplay from '@/components/app/error-display';
 import { useToast } from '@/hooks/use-toast';
+import { useAuthRedirect } from '@/hooks/use-auth-redirect';
+import { Button } from '@/components/ui/button';
+import { useFirebase } from '@/firebase';
+import { LogOut } from 'lucide-react';
+
 
 type AnalysisResultType = Awaited<ReturnType<typeof analyzeSkinCondition>>;
 type AnalysisState = 'idle' | 'loading' | 'success' | 'error';
 
 export default function Home() {
+  useAuthRedirect();
+  const { auth } = useFirebase();
+
   const [analysisState, setAnalysisState] = useState<AnalysisState>('idle');
   const [imageData, setImageData] = useState<{
     previewUrl: string | null;
@@ -49,16 +57,25 @@ export default function Home() {
     setError(null);
     setImageData({ previewUrl: null });
   };
+  
+  const handleSignOut = async () => {
+    await auth.signOut();
+  };
+
 
   return (
     <div className="flex min-h-screen w-full flex-col items-center text-foreground">
       <header className="w-full border-b border-white/20">
-        <div className="container mx-auto flex h-20 items-center px-4">
+        <div className="container mx-auto flex h-20 items-center justify-between px-4">
           <Logo />
+           <Button variant="ghost" onClick={handleSignOut}>
+            <LogOut className="mr-2 h-4 w-4" />
+            Sign Out
+          </Button>
         </div>
       </header>
       <main className="flex flex-1 flex-col items-center justify-center p-4 text-center">
-        <div className="w-full max-w-2xl space-y-8">
+        <div className="w-full max-w-3xl space-y-8">
            {analysisState === 'idle' && (
             <UploadForm 
               onAnalysisStart={handleAnalysisStart}
