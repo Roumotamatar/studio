@@ -22,7 +22,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Logo } from '@/components/app/logo';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, LogIn, UserPlus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useFirebase } from '@/firebase';
@@ -49,10 +48,12 @@ const formSchema = z.object({
 });
 
 type FormValues = z.infer<typeof formSchema>;
+type AuthAction = 'signin' | 'signup';
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [authAction, setAuthAction] = useState<AuthAction>('signin');
   const { toast } = useToast();
   const router = useRouter();
   const { auth, isUserLoading, user } = useFirebase();
@@ -114,11 +115,10 @@ export default function LoginPage() {
     }
   };
 
-  const handleEmailAuthAction = (action: 'signIn' | 'signUp', data: FormValues) => {
+  const handleEmailAuthAction = (data: FormValues) => {
     setIsLoading(true);
     
     const onSignInSuccess = () => {
-      // No toast on sign-in, redirect is handled by useEffect
       setIsLoading(false);
     };
 
@@ -129,9 +129,10 @@ export default function LoginPage() {
       });
       auth.signOut(); 
       setIsLoading(false);
+      setAuthAction('signin'); // Switch to sign in view
     };
 
-    if (action === 'signIn') {
+    if (authAction === 'signin') {
       initiateEmailSignIn(auth, data.email, data.password, onSignInSuccess, (err) => handleAuthError(err));
     } else {
       initiateEmailSignUp(auth, data.email, data.password, onSignUpSuccess, (err) => handleAuthError(err));
@@ -141,11 +142,12 @@ export default function LoginPage() {
   const handleGoogleSignIn = () => {
     setIsGoogleLoading(true);
     const onSuccess = () => {
-      // Redirect is handled by the useEffect
       setIsGoogleLoading(false);
     };
     initiateGoogleSignIn(auth, onSuccess, (err) => handleAuthError(err, true));
   };
+
+  const isSigningIn = authAction === 'signin';
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-4">
@@ -155,101 +157,55 @@ export default function LoginPage() {
       <Card className="w-full max-w-md shadow-2xl bg-background/80 backdrop-blur-sm border-2 border-white">
         <CardHeader className="text-center">
           <CardTitle className="text-3xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-accent to-orange-400">
-            Welcome to SkinWise
+             {isSigningIn ? 'Welcome Back!' : 'Create an Account'}
           </CardTitle>
           <CardDescription>
-            Your personal AI-powered skin health assistant.
+            {isSigningIn ? 'Sign in to access your dashboard.' : 'Your personal AI-powered skin health assistant.'}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 bg-primary/10 rounded-lg">
-              <TabsTrigger value="signin" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                <LogIn className="mr-2 h-4 w-4" /> Sign In
-              </TabsTrigger>
-              <TabsTrigger value="signup" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                <UserPlus className="mr-2 h-4 w-4" /> Sign Up
-              </TabsTrigger>
-            </TabsList>
-            <Form {...form}>
-              <form>
-                <TabsContent value="signin" className="mt-6 space-y-4">
-                   <FormField
-                      control={form.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Enter your email here" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Password</FormLabel>
-                          <FormControl>
-                            <Input type="password" placeholder="••••••••" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <Button 
-                      type="button" 
-                      className="w-full" 
-                      disabled={isLoading || isGoogleLoading}
-                      onClick={form.handleSubmit((data) => handleEmailAuthAction('signIn', data))}
-                    >
-                      {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Sign In
-                    </Button>
-                </TabsContent>
-                 <TabsContent value="signup" className="mt-6 space-y-4">
-                   <FormField
-                      control={form.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Enter your email here" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Password</FormLabel>
-                          <FormControl>
-                            <Input type="password" placeholder="••••••••" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <Button 
-                      type="button" 
-                      className="w-full" 
-                      disabled={isLoading || isGoogleLoading}
-                      onClick={form.handleSubmit((data) => handleEmailAuthAction('signUp', data))}
-                    >
-                      {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Create Account
-                    </Button>
-                </TabsContent>
-              </form>
-            </Form>
-          </Tabs>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleEmailAuthAction)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter your email here" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Password</FormLabel>
+                      <FormControl>
+                        <Input type="password" placeholder="••••••••" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button 
+                  type="submit" 
+                  className="w-full" 
+                  disabled={isLoading || isGoogleLoading}
+                >
+                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {isSigningIn ? (
+                      <> <LogIn className="mr-2 h-4 w-4" /> Sign In</>
+                  ) : (
+                      <> <UserPlus className="mr-2 h-4 w-4" /> Create Account</>
+                  )}
+                </Button>
+            </form>
+          </Form>
            <div className="mt-6">
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
@@ -274,6 +230,23 @@ export default function LoginPage() {
                   )}
                   Sign in with Google
                 </Button>
+              </div>
+              <div className="mt-6 text-center text-sm">
+                  {isSigningIn ? (
+                      <>
+                        Don't have an account?{' '}
+                        <Button variant="link" className="p-0 h-auto" onClick={() => setAuthAction('signup')}>
+                          Sign Up
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        Already have an account?{' '}
+                        <Button variant="link" className="p-0 h-auto" onClick={() => setAuthAction('signin')}>
+                          Sign In
+                        </Button>
+                      </>
+                    )}
               </div>
         </CardContent>
       </Card>
