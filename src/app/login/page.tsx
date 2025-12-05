@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -54,17 +54,18 @@ export default function LoginPage() {
     },
   });
 
-  if (isUserLoading) {
+  useEffect(() => {
+    if (!isUserLoading && user) {
+      router.push('/');
+    }
+  }, [user, isUserLoading, router]);
+
+  if (isUserLoading || user) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
-  }
-
-  if (user) {
-    router.push('/');
-    return null;
   }
 
   const handleAuthAction = async (action: 'signIn' | 'signUp', data: FormValues) => {
@@ -75,7 +76,7 @@ export default function LoginPage() {
         title: 'Success!',
         description: `You have been ${action === 'signIn' ? 'signed in' : 'signed up'}. Redirecting...`,
       });
-      // The onAuthStateChanged listener in FirebaseProvider will handle the redirect
+      // The useEffect hook will now handle the redirect
     };
 
     const onAuthError = (error: FirebaseError) => {
