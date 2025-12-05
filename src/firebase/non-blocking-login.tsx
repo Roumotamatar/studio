@@ -6,14 +6,10 @@ import {
   signInWithEmailAndPassword,
   signInWithPopup,
   GoogleAuthProvider,
-  RecaptchaVerifier,
-  signInWithPhoneNumber,
-  ConfirmationResult,
 } from 'firebase/auth';
 import { FirebaseError } from 'firebase/app';
 
 type SuccessCallback = () => void;
-type PhoneSuccessCallback = (confirmationResult: ConfirmationResult) => void;
 type ErrorCallback = (error: FirebaseError) => void;
 
 /** Initiate anonymous sign-in (non-blocking). */
@@ -61,33 +57,6 @@ export function initiateGoogleSignIn(
 ): void {
   const provider = new GoogleAuthProvider();
   signInWithPopup(authInstance, provider)
-    .then(onSuccess)
-    .catch(onError);
-}
-
-
-/** Sets up the reCAPTCHA verifier. */
-export function setupRecaptcha(auth: Auth, containerId: string): RecaptchaVerifier {
-    return new RecaptchaVerifier(auth, containerId, {
-      size: 'invisible',
-      callback: () => {
-        // reCAPTCHA solved, allow sign-in
-      },
-      'expired-callback': () => {
-        // Response expired. Ask user to solve reCAPTCHA again.
-      },
-    });
-}
-
-/** Initiate phone number sign-in (non-blocking). */
-export function initiatePhoneSignIn(
-  auth: Auth,
-  phoneNumber: string,
-  appVerifier: RecaptchaVerifier,
-  onSuccess: PhoneSuccessCallback,
-  onError: ErrorCallback
-): void {
-  signInWithPhoneNumber(auth, phoneNumber, appVerifier)
     .then(onSuccess)
     .catch(onError);
 }

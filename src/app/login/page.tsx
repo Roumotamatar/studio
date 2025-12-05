@@ -22,19 +22,16 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Logo } from '@/components/app/logo';
-import { Loader2, LogIn, UserPlus, Phone } from 'lucide-react';
+import { Loader2, LogIn, UserPlus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useFirebase } from '@/firebase';
 import { 
   initiateEmailSignUp,
   initiateEmailSignIn,
   initiateGoogleSignIn,
-  setupRecaptcha,
-  initiatePhoneSignIn,
 } from '@/firebase/non-blocking-login';
 import { FirebaseError } from 'firebase/app';
 import { Separator } from '@/components/ui/separator';
-import type { ConfirmationResult, RecaptchaVerifier } from 'firebase/auth';
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="24px" height="24px" {...props}>
@@ -49,30 +46,15 @@ const emailFormSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
 });
-const phoneFormSchema = z.object({
-  phoneNumber: z.string().min(10, { message: 'Please enter a valid phone number with country code.' }),
-});
-const codeFormSchema = z.object({
-  code: z.string().length(6, { message: 'Verification code must be 6 digits.' }),
-});
-
 
 type EmailFormValues = z.infer<typeof emailFormSchema>;
-type PhoneFormValues = z.infer<typeof phoneFormSchema>;
-type CodeFormValues = z.infer<typeof codeFormSchema>;
-
-type AuthAction = 'signin' | 'signup' | 'phone';
-type PhoneAuthState = 'enter-phone' | 'enter-code';
+type AuthAction = 'signin' | 'signup';
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [authAction, setAuthAction] = useState<AuthAction>('signin');
-  const [phoneAuthState, setPhoneAuthState] = useState<PhoneAuthState>('enter-phone');
-  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
-  const [recaptcha, setRecaptcha] = useState<RecaptchaVerifier | null>(null);
-
-
+  
   const { toast } = useToast();
   const router = useRouter();
   const { auth, isUserLoading, user } = useFirebase();
@@ -81,14 +63,6 @@ export default function LoginPage() {
     resolver: zodResolver(emailFormSchema),
     defaultValues: { email: '', password: '' },
   });
-  const phoneForm = useForm<PhoneFormValues>({
-    resolver: zodResolver(phoneFormSchema),
-    defaultValues: { phoneNumber: '' },
-  });
-  const codeForm = useForm<CodeFormValues>({
-    resolver: zodResolver(codeFormSchema),
-    defaultValues: { code: '' },
-  });
 
   useEffect(() => {
     if (!isUserLoading && user) {
@@ -96,13 +70,6 @@ export default function LoginPage() {
     }
   }, [user, isUserLoading, router]);
 
-   // Setup reCAPTCHA on component mount
-   useEffect(() => {
-    if (auth && authAction === 'phone' && !recaptcha) {
-      const verifier = setupRecaptcha(auth, 'recaptcha-container');
-      setRecaptcha(verifier);
-    }
-  }, [auth, authAction, recaptcha]);
 
   if (isUserLoading || user) {
     return (
@@ -132,18 +99,6 @@ export default function LoginPage() {
       case 'auth/popup-closed-by-user':
           errorMessage = 'The sign-in window was closed. Please try again.';
           break;
-      case 'auth/invalid-phone-number':
-        errorMessage = 'The phone number is not valid.';
-        break;
-      case 'auth/too-many-requests':
-        errorMessage = 'Too many requests. Please try again later.';
-        break;
-      case 'auth/code-expired':
-        errorMessage = 'The verification code has expired. Please request a new one.';
-        break;
-      case 'auth/invalid-verification-code':
-        errorMessage = 'Invalid verification code. Please try again.';
-        break;
     }
     
     toast({
@@ -177,31 +132,6 @@ export default function LoginPage() {
     } else {
       initiateEmailSignUp(auth, data.email, data.password, onSignUpSuccess, (err) => handleAuthError(err));
     }
-  };
-
-  const handleSendCode = (data: PhoneFormValues) => {
-    if (!recaptcha) {
-      toast({ variant: 'destructive', title: 'Error', description: 'reCAPTCHA not initialized. Please refresh.' });
-      return;
-    }
-    setIsLoading(true);
-    initiatePhoneSignIn(auth, data.phoneNumber, recaptcha, (result) => {
-      setConfirmationResult(result);
-      setPhoneAuthState('enter-code');
-      setIsLoading(false);
-      toast({ title: 'Verification Code Sent', description: 'Check your phone for the SMS code.' });
-    }, (err) => handleAuthError(err));
-  };
-
-  const handleVerifyCode = (data: CodeFormValues) => {
-    if (!confirmationResult) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Cannot verify code. Please try sending it again.' });
-      return;
-    }
-    setIsLoading(true);
-    confirmationResult.confirm(data.code)
-      .then(() => setIsLoading(false))
-      .catch((err) => handleAuthError(err));
   };
 
   const handleGoogleSignIn = () => {
@@ -274,72 +204,12 @@ export default function LoginPage() {
     </>
   );
 
-  const renderPhoneForm = () => {
-    if (phoneAuthState === 'enter-code') {
-      return (
-        <Form {...codeForm}>
-          <form onSubmit={codeForm.handleSubmit(handleVerifyCode)} className="space-y-4">
-            <FormField
-              control={codeForm.control}
-              name="code"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Verification Code</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter 6-digit code" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Verify Code
-            </Button>
-            <Button variant="link" className="p-0 h-auto w-full" onClick={() => setPhoneAuthState('enter-phone')}>
-                Go back to phone number entry
-            </Button>
-          </form>
-        </Form>
-      );
-    }
-
-    return (
-      <Form {...phoneForm}>
-        <form onSubmit={phoneForm.handleSubmit(handleSendCode)} className="space-y-4">
-          <FormField
-            control={phoneForm.control}
-            name="phoneNumber"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Phone Number</FormLabel>
-                <FormControl>
-                  <Input placeholder="+1 123 456 7890" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Send Verification Code
-          </Button>
-        </form>
-      </Form>
-    );
-  };
-
   const getTitle = () => {
-    if (authAction === 'phone') return 'Sign In with Phone';
     if (authAction === 'signup') return 'Create an Account';
     return 'Welcome Back!';
   };
 
   const getDescription = () => {
-    if (authAction === 'phone') {
-        if(phoneAuthState === 'enter-code') return 'Enter the code sent to your phone.';
-        return 'Enter your phone number to receive a verification code.';
-    }
     if (authAction === 'signup') return 'Your personal AI-powered skin health assistant.';
     return 'Sign in to access your dashboard.';
   };
@@ -347,7 +217,6 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-4">
-       <div id="recaptcha-container" className="my-4"></div>
        <div className="absolute top-8 left-8">
           <Logo />
         </div>
@@ -361,7 +230,7 @@ export default function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {authAction === 'phone' ? renderPhoneForm() : renderEmailForm()}
+          {renderEmailForm()}
            <div className="mt-6">
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
@@ -373,7 +242,7 @@ export default function LoginPage() {
                     </span>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4 mt-4">
+                <div className="grid grid-cols-1 gap-4 mt-4">
                   <Button 
                     variant="outline" 
                     onClick={handleGoogleSignIn}
@@ -385,14 +254,6 @@ export default function LoginPage() {
                       <GoogleIcon className="mr-2 h-5 w-5" />
                     )}
                     Google
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => setAuthAction(authAction === 'phone' ? 'signin' : 'phone')}
-                    disabled={isLoading || isGoogleLoading}
-                  >
-                    <Phone className="mr-2 h-5 w-5" />
-                    {authAction === 'phone' ? 'Email' : 'Phone'}
                   </Button>
                 </div>
               </div>
