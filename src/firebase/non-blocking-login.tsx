@@ -4,6 +4,8 @@ import {
   signInAnonymously,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
 } from 'firebase/auth';
 import { FirebaseError } from 'firebase/app';
 
@@ -43,6 +45,18 @@ export function initiateEmailSignIn(
   onError?: ErrorCallback
 ): void {
   signInWithEmailAndPassword(authInstance, email, password)
+    .then(onSuccess)
+    .catch(onError);
+}
+
+/** Initiate Google sign-in (non-blocking). */
+export function initiateGoogleSignIn(
+  authInstance: Auth,
+  onSuccess?: SuccessCallback,
+  onError?: ErrorCallback
+): void {
+  const provider = new GoogleAuthProvider();
+  signInWithPopup(authInstance, provider)
     .then(onSuccess)
     .catch(onError);
 }

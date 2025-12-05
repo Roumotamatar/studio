@@ -29,9 +29,19 @@ import { useFirebase } from '@/firebase';
 import { 
   initiateEmailSignUp,
   initiateEmailSignIn,
+  initiateGoogleSignIn,
 } from '@/firebase/non-blocking-login';
 import { FirebaseError } from 'firebase/app';
+import { Separator } from '@/components/ui/separator';
 
+const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="24px" height="24px" {...props}>
+      <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12s5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24s8.955,20,20,20s20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/>
+      <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/>
+      <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.222,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/>
+      <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.574l6.19,5.238C39.921,35.619,44,29.566,44,24C44,22.659,43.862,21.35,43.611,20.083z"/>
+    </svg>
+  );
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -42,6 +52,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
   const { auth, isUserLoading, user } = useFirebase();
@@ -68,7 +79,42 @@ export default function LoginPage() {
     );
   }
 
-  const handleAuthAction = async (action: 'signIn' | 'signUp', data: FormValues) => {
+  const handleAuthError = (error: FirebaseError, googleSignIn = false) => {
+    let errorMessage = 'An unexpected error occurred. Please try again.';
+    switch (error.code) {
+      case 'auth/user-not-found':
+      case 'auth/wrong-password':
+      case 'auth/invalid-credential':
+        errorMessage = 'Invalid email or password.';
+        break;
+      case 'auth/email-already-in-use':
+        errorMessage = 'An account with this email already exists.';
+        break;
+      case 'auth/weak-password':
+        errorMessage = 'The password is too weak.';
+        break;
+      case 'auth/account-exists-with-different-credential':
+        errorMessage = 'An account already exists with the same email address but different sign-in credentials.';
+        break;
+      case 'auth/popup-closed-by-user':
+          errorMessage = 'The sign-in window was closed. Please try again.';
+          break;
+    }
+    
+    toast({
+      variant: 'destructive',
+      title: 'Authentication Failed',
+      description: errorMessage,
+    });
+
+    if (googleSignIn) {
+      setIsGoogleLoading(false);
+    } else {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEmailAuthAction = (action: 'signIn' | 'signUp', data: FormValues) => {
     setIsLoading(true);
     
     const onSignInSuccess = () => {
@@ -81,40 +127,24 @@ export default function LoginPage() {
         title: 'Success!',
         description: `Sign up successful, please sign in now`,
       });
-      // The user is automatically signed in on creation, so we sign them out to force a manual login.
       auth.signOut(); 
       setIsLoading(false);
     };
 
-    const onAuthError = (error: FirebaseError) => {
-      let errorMessage = 'An unexpected error occurred. Please try again.';
-      switch (error.code) {
-        case 'auth/user-not-found':
-        case 'auth/wrong-password':
-        case 'auth/invalid-credential':
-          errorMessage = 'Invalid email or password.';
-          break;
-        case 'auth/email-already-in-use':
-          errorMessage = 'An account with this email already exists.';
-          break;
-        case 'auth/weak-password':
-          errorMessage = 'The password is too weak.';
-          break;
-      }
-      
-      toast({
-        variant: 'destructive',
-        title: 'Authentication Failed',
-        description: errorMessage,
-      });
-      setIsLoading(false);
-    };
-
     if (action === 'signIn') {
-      initiateEmailSignIn(auth, data.email, data.password, onSignInSuccess, onAuthError);
+      initiateEmailSignIn(auth, data.email, data.password, onSignInSuccess, (err) => handleAuthError(err));
     } else {
-      initiateEmailSignUp(auth, data.email, data.password, onSignUpSuccess, onAuthError);
+      initiateEmailSignUp(auth, data.email, data.password, onSignUpSuccess, (err) => handleAuthError(err));
     }
+  };
+
+  const handleGoogleSignIn = () => {
+    setIsGoogleLoading(true);
+    const onSuccess = () => {
+      // Redirect is handled by the useEffect
+      setIsGoogleLoading(false);
+    };
+    initiateGoogleSignIn(auth, onSuccess, (err) => handleAuthError(err, true));
   };
 
   return (
@@ -173,8 +203,8 @@ export default function LoginPage() {
                     <Button 
                       type="button" 
                       className="w-full" 
-                      disabled={isLoading}
-                      onClick={form.handleSubmit((data) => handleAuthAction('signIn', data))}
+                      disabled={isLoading || isGoogleLoading}
+                      onClick={form.handleSubmit((data) => handleEmailAuthAction('signIn', data))}
                     >
                       {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       Sign In
@@ -210,8 +240,8 @@ export default function LoginPage() {
                     <Button 
                       type="button" 
                       className="w-full" 
-                      disabled={isLoading}
-                      onClick={form.handleSubmit((data) => handleAuthAction('signUp', data))}
+                      disabled={isLoading || isGoogleLoading}
+                      onClick={form.handleSubmit((data) => handleEmailAuthAction('signUp', data))}
                     >
                       {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       Create Account
@@ -220,6 +250,31 @@ export default function LoginPage() {
               </form>
             </Form>
           </Tabs>
+           <div className="mt-6">
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <Separator />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">
+                      Or continue with
+                    </span>
+                  </div>
+                </div>
+                <Button 
+                  variant="outline" 
+                  className="w-full mt-4" 
+                  onClick={handleGoogleSignIn}
+                  disabled={isGoogleLoading || isLoading}
+                >
+                  {isGoogleLoading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <GoogleIcon className="mr-2 h-5 w-5" />
+                  )}
+                  Sign in with Google
+                </Button>
+              </div>
         </CardContent>
       </Card>
     </div>
