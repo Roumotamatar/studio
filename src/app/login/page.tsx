@@ -71,12 +71,19 @@ export default function LoginPage() {
   const handleAuthAction = async (action: 'signIn' | 'signUp', data: FormValues) => {
     setIsLoading(true);
     
-    const onAuthSuccess = () => {
+    const onSignInSuccess = () => {
+      // No toast on sign-in, redirect is handled by useEffect
+      setIsLoading(false);
+    };
+
+    const onSignUpSuccess = () => {
       toast({
         title: 'Success!',
-        description: `You have been ${action === 'signIn' ? 'signed in' : 'signed up'}. Redirecting...`,
+        description: `Sign up successful, please sign in now`,
       });
-      // The useEffect hook will now handle the redirect
+      // The user is automatically signed in on creation, so we sign them out to force a manual login.
+      auth.signOut(); 
+      setIsLoading(false);
     };
 
     const onAuthError = (error: FirebaseError) => {
@@ -104,9 +111,9 @@ export default function LoginPage() {
     };
 
     if (action === 'signIn') {
-      initiateEmailSignIn(auth, data.email, data.password, onAuthSuccess, onAuthError);
+      initiateEmailSignIn(auth, data.email, data.password, onSignInSuccess, onAuthError);
     } else {
-      initiateEmailSignUp(auth, data.email, data.password, onAuthSuccess, onAuthError);
+      initiateEmailSignUp(auth, data.email, data.password, onSignUpSuccess, onAuthError);
     }
   };
 
@@ -144,7 +151,7 @@ export default function LoginPage() {
                         <FormItem>
                           <FormLabel>Email</FormLabel>
                           <FormControl>
-                            <Input placeholder="you@example.com" {...field} />
+                            <Input placeholder="Enter your email here" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -181,7 +188,7 @@ export default function LoginPage() {
                         <FormItem>
                           <FormLabel>Email</FormLabel>
                           <FormControl>
-                            <Input placeholder="you@example.com" {...field} />
+                            <Input placeholder="Enter your email here" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
