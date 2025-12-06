@@ -50,7 +50,8 @@ export default function UploadForm({ onAnalysisStart, onAnalysisSuccess, onAnaly
     onAnalysisStart();
     
     try {
-      const result = await analyzeSkinCondition(imagePreview);
+      const idToken = await user.getIdToken();
+      const result = await analyzeSkinCondition(idToken, imagePreview);
       
       // Decrement trial count
       const userRef = doc(firestore, 'users', user.uid);

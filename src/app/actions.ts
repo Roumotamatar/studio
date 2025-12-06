@@ -14,9 +14,9 @@ if (getApps().length === 0) {
   });
 }
 
-export async function analyzeSkinCondition(photoDataUri: string) {
+export async function analyzeSkinCondition(idToken: string, photoDataUri: string) {
   const auth = getAuth();
-  const token = await auth.verifyIdToken(photoDataUri.split(';')[2]); // This is a temporary workaround to pass the id token
+  const token = await auth.verifyIdToken(idToken);
   const uid = token.uid;
 
   if (!uid) {
@@ -44,7 +44,7 @@ export async function analyzeSkinCondition(photoDataUri: string) {
   }
 
   try {
-    const classificationResult = await classifyUploadedImage({ photoDataUri: photoDataUri.split(';')[0] + ';' + photoDataUri.split(';')[1] });
+    const classificationResult = await classifyUploadedImage({ photoDataUri });
     if (!classificationResult?.diseaseClassification) {
       throw new Error('Could not classify the image.');
     }
