@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { analyzeSkinCondition } from './actions';
 import { Logo } from '@/components/app/logo';
 import UploadForm from '@/components/app/upload-form';
@@ -10,8 +10,9 @@ import ErrorDisplay from '@/components/app/error-display';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthRedirect } from '@/hooks/use-auth-redirect';
 import { Button } from '@/components/ui/button';
-import { useFirebase } from '@/firebase';
+import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { LogOut } from 'lucide-react';
+import { doc } from 'firebase/firestore';
 
 
 type AnalysisResultType = Awaited<ReturnType<typeof analyzeSkinCondition>>;
@@ -19,7 +20,13 @@ type AnalysisState = 'idle' | 'loading' | 'success' | 'error';
 
 export default function Home() {
   useAuthRedirect();
-  const { auth } = useFirebase();
+  const { auth, user, firestore } = useFirebase();
+
+  const userDocRef = useMemoFirebase(
+    () => (user ? doc(firestore, 'users', user.uid) : null),
+    [user, firestore]
+  );
+  const { data: userData } = useDoc<{ trialCount: number; hasPaid: boolean }>(userDocRef);
 
   const [analysisState, setAnalysisState] = useState<AnalysisState>('idle');
   const [imageData, setImageData] = useState<{
@@ -62,16 +69,24 @@ export default function Home() {
     await auth.signOut();
   };
 
+  const remainingTrials = userData?.trialCount ?? 0;
+  const hasPaid = userData?.hasPaid ?? false;
+  const canAnalyze = hasPaid || remainingTrials > 0;
 
   return (
     <div className="flex min-h-screen w-full flex-col items-center text-foreground">
       <header className="w-full border-b border-white/20">
         <div className="container mx-auto flex h-20 items-center justify-between px-4">
           <Logo />
-           <Button variant="ghost" onClick={handleSignOut}>
-            <LogOut className="mr-2 h-4 w-4" />
-            Sign Out
-          </Button>
+           <div className="flex items-center gap-4">
+            <span className="text-sm font-medium text-foreground/80">
+              {hasPaid ? 'Premium Member' : `Trials left: ${remainingTrials}`}
+            </span>
+            <Button variant="ghost" onClick={handleSignOut}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Sign Out
+            </Button>
+          </div>
         </div>
       </header>
       <main className="flex flex-1 flex-col items-center justify-center p-4 text-center">
@@ -81,6 +96,7 @@ export default function Home() {
               onAnalysisStart={handleAnalysisStart}
               onAnalysisSuccess={handleAnalysisSuccess}
               onAnalysisError={handleAnalysisError}
+              canAnalyze={canAnalyze}
             />
           )}
           {analysisState === 'loading' && <LoadingIndicator />}

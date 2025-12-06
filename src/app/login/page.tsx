@@ -24,7 +24,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Logo } from '@/components/app/logo';
 import { Loader2, LogIn, UserPlus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useFirebase } from '@/firebase';
+import { useFirebase, setDocumentNonBlocking } from '@/firebase';
 import { 
   initiateEmailSignUp,
   initiateEmailSignIn,
@@ -32,6 +32,7 @@ import {
 } from '@/firebase/non-blocking-login';
 import { FirebaseError } from 'firebase/app';
 import { Separator } from '@/components/ui/separator';
+import { doc, serverTimestamp } from 'firebase/firestore';
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="24px" height="24px" {...props}>
@@ -57,7 +58,7 @@ export default function LoginPage() {
   
   const { toast } = useToast();
   const router = useRouter();
-  const { auth, isUserLoading, user } = useFirebase();
+  const { auth, firestore, isUserLoading, user } = useFirebase();
 
   const emailForm = useForm<EmailFormValues>({
     resolver: zodResolver(emailFormSchema),
@@ -112,19 +113,31 @@ export default function LoginPage() {
       setIsGoogleLoading(false);
     }
   };
+  
+  const createUserProfile = (user: any) => {
+    const userRef = doc(firestore, 'users', user.uid);
+    setDocumentNonBlocking(userRef, {
+      id: user.uid,
+      email: user.email,
+      trialCount: 3,
+      hasPaid: false,
+      createdAt: serverTimestamp(),
+    }, { merge: true });
+  }
 
   const handleEmailAuthAction = (data: EmailFormValues) => {
     setIsLoading(true);
     
     const onSignInSuccess = () => setIsLoading(false);
-    const onSignUpSuccess = () => {
+    const onSignUpSuccess = (userCredential: any) => {
+      createUserProfile(userCredential.user);
       toast({
         title: 'Success!',
         description: `Sign up successful, please sign in now`,
       });
       auth.signOut(); 
       setIsLoading(false);
-      setAuthAction('signin'); // Switch to sign in view
+      setAuthAction('signin');
     };
 
     if (authAction === 'signin') {
@@ -136,7 +149,10 @@ export default function LoginPage() {
 
   const handleGoogleSignIn = () => {
     setIsGoogleLoading(true);
-    const onSuccess = () => setIsGoogleLoading(false);
+    const onSuccess = (userCredential: any) => {
+      createUserProfile(userCredential.user);
+      setIsGoogleLoading(false)
+    };
     initiateGoogleSignIn(auth, onSuccess, (err) => handleAuthError(err, true));
   };
   

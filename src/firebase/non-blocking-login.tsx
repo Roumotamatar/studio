@@ -6,10 +6,11 @@ import {
   signInWithEmailAndPassword,
   signInWithPopup,
   GoogleAuthProvider,
+  UserCredential,
 } from 'firebase/auth';
 import { FirebaseError } from 'firebase/app';
 
-type SuccessCallback = () => void;
+type SuccessCallback = (userCredential: UserCredential) => void;
 type ErrorCallback = (error: FirebaseError) => void;
 
 /** Initiate anonymous sign-in (non-blocking). */

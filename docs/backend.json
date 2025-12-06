@@ -27,13 +27,21 @@
           "type": "string",
           "description": "Timestamp indicating when the user account was created.",
           "format": "date-time"
+        },
+        "trialCount": {
+          "type": "number",
+          "description": "Number of free trials remaining for the user."
+        },
+        "hasPaid": {
+          "type": "boolean",
+          "description": "Indicates if the user has paid for the service."
         }
       },
       "required": [
         "id",
         "email",
-        "firstName",
-        "lastName",
+        "trialCount",
+        "hasPaid",
         "createdAt"
       ]
     },
@@ -116,7 +124,7 @@
           "description": "Unique identifier for the remedy entity."
         },
         "diagnosisId": {
-          "type": "string",
+          "type": "string",.
           "description": "Reference to Diagnosis. (Relationship: Diagnosis 1:N Remedy)"
         },
         "remedyText": {
