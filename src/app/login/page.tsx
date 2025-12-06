@@ -116,11 +116,14 @@ export default function LoginPage() {
   
   const createUserProfile = (user: any) => {
     const userRef = doc(firestore, 'users', user.uid);
+    // You can replace this with your actual owner email
+    const isOwner = user.email === 'owner@example.com';
+    
     setDocumentNonBlocking(userRef, {
       id: user.uid,
       email: user.email,
-      trialCount: 3,
-      hasPaid: false,
+      trialCount: isOwner ? 9999 : 3, // Effectively infinite for owner
+      hasPaid: isOwner,
       createdAt: serverTimestamp(),
     }, { merge: true });
   }
@@ -278,3 +281,5 @@ export default function LoginPage() {
     </div>
   );
 }
+
+    
