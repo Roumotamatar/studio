@@ -12,11 +12,11 @@ import {
 } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertTriangle, RefreshCcw, Info, Sparkles, Pill, CheckCircle } from 'lucide-react';
-import type { analyzeSkinCondition } from '@/app/actions';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { AnalysisResultType } from '@/app/page';
 
 interface AnalysisResultProps {
-  result: Awaited<ReturnType<typeof analyzeSkinCondition>>;
+  result: AnalysisResultType;
   imagePreview: string | null;
   onReset: () => void;
 }

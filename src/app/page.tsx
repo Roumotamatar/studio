@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { analyzeSkinCondition } from './actions';
 import { Logo } from '@/components/app/logo';
 import UploadForm from '@/components/app/upload-form';
 import LoadingIndicator from '@/components/app/loading-indicator';
@@ -15,7 +14,11 @@ import { LogOut } from 'lucide-react';
 import { doc } from 'firebase/firestore';
 
 
-type AnalysisResultType = Awaited<ReturnType<typeof analyzeSkinCondition>>;
+export interface AnalysisResultType {
+  classification: string;
+  remedies: string;
+  remainingTrials: number;
+};
 type AnalysisState = 'idle' | 'loading' | 'success' | 'error';
 
 export default function Home() {
@@ -97,6 +100,7 @@ export default function Home() {
               onAnalysisSuccess={handleAnalysisSuccess}
               onAnalysisError={handleAnalysisError}
               canAnalyze={canAnalyze}
+              userData={userData}
             />
           )}
           {analysisState === 'loading' && <LoadingIndicator />}

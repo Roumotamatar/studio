@@ -5,22 +5,24 @@ import Image from 'next/image';
 import { Upload, Loader2, Sparkles, Image as ImageIcon, X, Info, Lightbulb, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { analyzeSkinCondition } from '@/app/actions';
-import type { analyzeSkinCondition as analyzeSkinConditionType } from '@/app/actions';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
+import { classifyUploadedImage } from '@/ai/flows/classify-uploaded-image';
+import { suggestRemedies } from '@/ai/flows/suggest-remedies-for-detected-condition';
+import type { AnalysisResultType } from '@/app/page';
 
 
 interface UploadFormProps {
   onAnalysisStart: () => void;
-  onAnalysisSuccess: (result: Awaited<ReturnType<typeof analyzeSkinConditionType>>, previewUrl: string) => void;
+  onAnalysisSuccess: (result: AnalysisResultType, previewUrl: string) => void;
   onAnalysisError: (error: string) => void;
   canAnalyze: boolean;
+  userData: { trialCount: number; hasPaid: boolean; } | null | undefined;
 }
 
-export default function UploadForm({ onAnalysisStart, onAnalysisSuccess, onAnalysisError, canAnalyze }: UploadFormProps) {
+export default function UploadForm({ onAnalysisStart, onAnalysisSuccess, onAnalysisError, canAnalyze, userData }: UploadFormProps) {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -44,21 +46,44 @@ export default function UploadForm({ onAnalysisStart, onAnalysisSuccess, onAnaly
   };
 
   const handleAnalyzeClick = async () => {
-    if (!imageFile || !imagePreview || !user) return;
+    if (!imageFile || !imagePreview || !user || !userData) return;
+    
+    if (!userData.hasPaid && userData.trialCount <= 0) {
+      onAnalysisError('No trials remaining. Please upgrade to continue.');
+      return;
+    }
 
     setIsAnalyzing(true);
     onAnalysisStart();
     
     try {
-      const idToken = await user.getIdToken();
-      const result = await analyzeSkinCondition(idToken, imagePreview);
-      
-      // Decrement trial count
-      const userRef = doc(firestore, 'users', user.uid);
-      updateDocumentNonBlocking(userRef, {
-        trialCount: (result.remainingTrials)
+      const classificationResult = await classifyUploadedImage({ photoDataUri: imagePreview });
+      if (!classificationResult?.diseaseClassification) {
+        throw new Error('Could not classify the image.');
+      }
+
+      const remedyResult = await suggestRemedies({
+        detectedCondition: classificationResult.diseaseClassification,
       });
+      if (!remedyResult?.suggestedRemedies) {
+        throw new Error('Could not generate remedies.');
+      }
+
+      let remainingTrials = userData.trialCount;
+      if (!userData.hasPaid) {
+        remainingTrials--;
+        const userRef = doc(firestore, 'users', user.uid);
+        updateDocumentNonBlocking(userRef, {
+          trialCount: remainingTrials,
+        });
+      }
       
+      const result: AnalysisResultType = {
+        classification: classificationResult.diseaseClassification,
+        remedies: remedyResult.suggestedRemedies,
+        remainingTrials,
+      }
+
       onAnalysisSuccess(result, imagePreview);
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
