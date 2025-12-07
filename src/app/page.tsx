@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Logo } from '@/components/app/logo';
 import UploadForm from '@/components/app/upload-form';
 import LoadingIndicator from '@/components/app/loading-indicator';
@@ -95,13 +95,21 @@ export default function Home() {
       <main className="flex flex-1 flex-col items-center justify-center p-4 text-center">
         <div className="w-full max-w-3xl space-y-8">
            {analysisState === 'idle' && (
-            <UploadForm 
-              onAnalysisStart={handleAnalysisStart}
-              onAnalysisSuccess={handleAnalysisSuccess}
-              onAnalysisError={handleAnalysisError}
-              canAnalyze={canAnalyze}
-              userData={userData}
-            />
+            <>
+              <div className="text-center">
+                  <h1 className="text-4xl font-bold tracking-tight text-gray-800 sm:text-5xl">Check Your Skin Instantly <br /> with AI Skin Image Search&trade;</h1>
+                  <p className="mt-4 text-lg text-gray-600">
+                    Try it now for only <span className="font-bold text-primary">$1.29</span> – get instant results powered by AI
+                  </p>
+              </div>
+              <UploadForm 
+                onAnalysisStart={handleAnalysisStart}
+                onAnalysisSuccess={handleAnalysisSuccess}
+                onAnalysisError={handleAnalysisError}
+                canAnalyze={canAnalyze}
+                userData={userData}
+              />
+            </>
           )}
           {analysisState === 'loading' && <LoadingIndicator />}
           {analysisState === 'success' && result && (
