@@ -33,6 +33,7 @@ import {
 import { FirebaseError } from 'firebase/app';
 import { Separator } from '@/components/ui/separator';
 import { doc, serverTimestamp } from 'firebase/firestore';
+import { sendEmailVerification, User } from 'firebase/auth';
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="24px" height="24px" {...props}>
@@ -114,16 +115,13 @@ export default function LoginPage() {
     }
   };
   
-  const createUserProfile = (user: any) => {
+  const createUserProfile = (user: User) => {
     const userRef = doc(firestore, 'users', user.uid);
-    // You can replace this with your actual owner email
-    const isOwner = user.email === 'owner@example.com';
-    
     setDocumentNonBlocking(userRef, {
       id: user.uid,
       email: user.email,
-      trialCount: isOwner ? 9999 : 3, // Effectively infinite for owner
-      hasPaid: isOwner,
+      trialCount: 3,
+      hasPaid: false,
       createdAt: serverTimestamp(),
     }, { merge: true });
   }
@@ -132,15 +130,28 @@ export default function LoginPage() {
     setIsLoading(true);
     
     const onSignInSuccess = () => setIsLoading(false);
-    const onSignUpSuccess = (userCredential: any) => {
-      createUserProfile(userCredential.user);
-      toast({
-        title: 'Success!',
-        description: `Sign up successful, please sign in now`,
-      });
-      auth.signOut(); 
-      setIsLoading(false);
-      setAuthAction('signin');
+    
+    const onSignUpSuccess = async (userCredential: any) => {
+      const newUser = userCredential.user as User;
+      try {
+        await sendEmailVerification(newUser);
+        createUserProfile(newUser);
+        toast({
+          title: 'Verification Email Sent',
+          description: "We've sent a verification link to your email. Please check your inbox to continue.",
+        });
+        auth.signOut();
+      } catch (error) {
+        console.error("Error sending verification email:", error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Could not send verification email. Please try signing up again.",
+        });
+      } finally {
+        setIsLoading(false);
+        setAuthAction('signin');
+      }
     };
 
     if (authAction === 'signin') {
@@ -281,5 +292,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
-    

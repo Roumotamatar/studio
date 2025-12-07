@@ -10,8 +10,10 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuthRedirect } from '@/hooks/use-auth-redirect';
 import { Button } from '@/components/ui/button';
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
-import { LogOut } from 'lucide-react';
+import { LogOut, MailCheck, Loader2 } from 'lucide-react';
 import { doc } from 'firebase/firestore';
+import { sendEmailVerification } from 'firebase/auth';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 
 export interface AnalysisResultType {
@@ -21,9 +23,64 @@ export interface AnalysisResultType {
 };
 type AnalysisState = 'idle' | 'loading' | 'success' | 'error';
 
+const VerifyEmailScreen = () => {
+  const { auth, user } = useFirebase();
+  const [isResending, setIsResending] = useState(false);
+  const { toast } = useToast();
+
+  const handleResendVerification = async () => {
+    if (!user) return;
+    setIsResending(true);
+    try {
+      await sendEmailVerification(user);
+      toast({
+        title: 'Verification Email Sent',
+        description: 'A new verification link has been sent to your email address.',
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to send verification email. Please try again.',
+      });
+    } finally {
+      setIsResending(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-1 items-center justify-center">
+      <Card className="w-full max-w-md text-center shadow-2xl bg-background/80 backdrop-blur-sm border-2 border-white">
+        <CardHeader>
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <MailCheck className="h-8 w-8" />
+          </div>
+          <CardTitle className="mt-4 text-2xl font-bold">Verify Your Email</CardTitle>
+          <CardDescription>
+            We've sent a verification link to <strong>{user?.email}</strong>. Please check your inbox (and spam folder) to continue.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Didn't receive an email?
+          </p>
+          <Button onClick={handleResendVerification} disabled={isResending} className="w-full">
+            {isResending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Resend Verification Link
+          </Button>
+           <Button variant="ghost" onClick={() => auth.signOut()} className="w-full">
+            Use a different account
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+
 export default function Home() {
   useAuthRedirect();
-  const { auth, user, firestore } = useFirebase();
+  const { auth, user, firestore, isUserLoading } = useFirebase();
 
   const userDocRef = useMemoFirebase(
     () => (user ? doc(firestore, 'users', user.uid) : null),
@@ -75,6 +132,35 @@ export default function Home() {
   const remainingTrials = userData?.trialCount ?? 0;
   const hasPaid = userData?.hasPaid ?? false;
   const canAnalyze = hasPaid || remainingTrials > 0;
+
+  if (isUserLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // If user is logged in but email is not verified (and not a Google user), show verification screen
+  if (user && !user.emailVerified && user.providerData.some(p => p.providerId === 'password')) {
+    return (
+      <div className="flex min-h-screen w-full flex-col items-center text-foreground">
+        <header className="w-full border-b border-white/20">
+          <div className="container mx-auto flex h-20 items-center justify-between px-4">
+            <Logo />
+            <Button variant="ghost" onClick={handleSignOut}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Sign Out
+            </Button>
+          </div>
+        </header>
+        <main className="flex flex-1 flex-col items-center justify-center p-4 text-center w-full">
+           <VerifyEmailScreen />
+        </main>
+      </div>
+    );
+  }
+
 
   return (
     <div className="flex min-h-screen w-full flex-col items-center text-foreground">
