@@ -97,7 +97,7 @@ export default function LoginPage() {
         errorMessage = 'The password is too weak.';
         break;
       case 'auth/account-exists-with-different-credential':
-        errorMessage = 'An account already exists with the same email address but different sign-in credentials.';
+        errorMessage = 'An account already exists with this email. Please sign in using the method you originally used.';
         break;
       case 'auth/popup-closed-by-user':
           errorMessage = 'The sign-in window was closed. Please try again.';
@@ -295,5 +295,7 @@ export default function LoginPage() {
     </div>
   );
 }
+
+    
 
     

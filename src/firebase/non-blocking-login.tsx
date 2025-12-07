@@ -59,9 +59,11 @@ export function initiateGoogleSignIn(
   const provider = new GoogleAuthProvider();
   // This parameter helps link accounts with the same verified email.
   provider.setCustomParameters({
-    'allow_select_account': true
+    'prompt': 'select_account'
   });
   signInWithPopup(authInstance, provider)
     .then(onSuccess)
     .catch(onError);
 }
+
+    
