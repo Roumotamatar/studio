@@ -12,6 +12,7 @@ import { doc } from 'firebase/firestore';
 import { classifyUploadedImage } from '@/ai/flows/classify-uploaded-image';
 import { suggestRemedies } from '@/ai/flows/suggest-remedies-for-detected-condition';
 import type { AnalysisResultType } from '@/app/page';
+import { useToast } from '@/hooks/use-toast';
 
 
 interface UploadFormProps {
@@ -26,9 +27,11 @@ export default function UploadForm({ onAnalysisStart, onAnalysisSuccess, onAnaly
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isUpgrading, setIsUpgrading] = useState(false);
   const [termsAgreed, setTermsAgreed] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user, firestore } = useFirebase();
+  const { toast } = useToast();
 
   const handleImageChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -93,6 +96,29 @@ export default function UploadForm({ onAnalysisStart, onAnalysisSuccess, onAnaly
       setIsAnalyzing(false);
     }
   };
+  
+  const handleUpgrade = () => {
+    if (!user) return;
+    setIsUpgrading(true);
+    const userRef = doc(firestore, 'users', user.uid);
+    // This simulates a successful payment by updating the user's status.
+    updateDocumentNonBlocking(userRef, { hasPaid: true });
+    
+    // We don't need to wait for the update to complete on the backend.
+    // The UI will update automatically via the real-time listener on the user document.
+    toast({
+        title: "Upgrade Successful!",
+        description: "You now have unlimited access. Enjoy!",
+    });
+    
+    // Note: In a real app, you'd handle the response from your payment provider
+    // before updating the database.
+    // The loading state is mostly for UI feedback in this simulation.
+    // We'll set a timeout just to let the user see the loading state.
+    setTimeout(() => {
+      setIsUpgrading(false);
+    }, 1500)
+  };
 
   const triggerFileSelect = () => fileInputRef.current?.click();
   const handleRemoveImage = (e: React.MouseEvent) => {
@@ -121,7 +147,7 @@ export default function UploadForm({ onAnalysisStart, onAnalysisSuccess, onAnaly
                 ref={fileInputRef}
                 onChange={handleImageChange}
                 className="hidden"
-                disabled={!canAnalyze}
+                disabled={isAnalyzing || isUpgrading}
             />
 
             {imagePreview ? (
@@ -133,7 +159,7 @@ export default function UploadForm({ onAnalysisStart, onAnalysisSuccess, onAnaly
                     className="object-contain"
                     />
                     <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center opacity-0 hover:opacity-100 transition-opacity gap-4">
-                    <Button variant="secondary" onClick={triggerFileSelect} disabled={!canAnalyze}>Change Photo</Button>
+                    <Button variant="secondary" onClick={triggerFileSelect} disabled={isAnalyzing || isUpgrading}>Change Photo</Button>
                     <Button
                         variant="destructive"
                         size="sm"
@@ -175,12 +201,18 @@ export default function UploadForm({ onAnalysisStart, onAnalysisSuccess, onAnaly
             )}
             
             {!canAnalyze && !userData?.hasPaid && (
-                <Button className="w-full" size="lg" onClick={() => {
-                    // Placeholder for payment logic
-                    alert("Redirecting to payment gateway...");
-                }}>
-                    <Zap className="mr-2 h-5 w-5" />
-                    Upgrade to Premium
+                <Button className="w-full" size="lg" onClick={handleUpgrade} disabled={isUpgrading}>
+                    {isUpgrading ? (
+                      <>
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="mr-2 h-5 w-5" />
+                        Upgrade to Premium
+                      </>
+                    )}
                 </Button>
             )}
             
@@ -193,7 +225,7 @@ export default function UploadForm({ onAnalysisStart, onAnalysisSuccess, onAnaly
 
             <Button
                 onClick={handleAnalyzeClick}
-                disabled={!imageFile || isAnalyzing || !canAnalyze || !termsAgreed}
+                disabled={!imageFile || isAnalyzing || !canAnalyze || !termsAgreed || isUpgrading}
                 className="w-full text-lg font-bold bg-gradient-to-r from-primary to-teal-500 hover:from-primary/90 hover:to-teal-500/90 text-white shadow-lg disabled:bg-gray-400 disabled:shadow-none"
                 size="lg"
             >
