@@ -57,6 +57,10 @@ export function initiateGoogleSignIn(
   onError?: ErrorCallback
 ): void {
   const provider = new GoogleAuthProvider();
+  // This parameter helps link accounts with the same verified email.
+  provider.setCustomParameters({
+    'allow_select_account': true
+  });
   signInWithPopup(authInstance, provider)
     .then(onSuccess)
     .catch(onError);
