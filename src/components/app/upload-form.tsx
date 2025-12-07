@@ -175,7 +175,7 @@ export default function UploadForm({ onAnalysisStart, onAnalysisSuccess, onAnaly
             )}
             
             {!canAnalyze && !userData?.hasPaid && (
-                <Button className="w-full" size="lg">
+                <Button className="w-full" size="lg" onClick={() => alert('Payment system coming soon!')}>
                     <Zap className="mr-2 h-5 w-5" />
                     Upgrade to Premium
                 </Button>
@@ -211,3 +211,5 @@ export default function UploadForm({ onAnalysisStart, onAnalysisSuccess, onAnaly
     </div>
   );
 }
+
+    

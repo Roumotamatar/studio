@@ -41,7 +41,7 @@ export default function AnalysisResult({ result, imagePreview, onReset }: Analys
     <Card className="w-full max-w-3xl animate-in fade-in-50 slide-in-from-bottom-5 duration-700 shadow-2xl bg-background/80 backdrop-blur-sm border-2 border-white">
       <CardHeader className="text-center">
         <CardTitle className="text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-accent to-orange-400">Analysis Complete</CardTitle>
-        <CardDescription>Here are the results from our AI analysis.</CardDescription>
+        <CardDescription>Here are the results from our AI analysis. You have {result.remainingTrials} trials remaining.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <Tabs defaultValue="overview" className="w-full">
@@ -108,3 +108,5 @@ export default function AnalysisResult({ result, imagePreview, onReset }: Analys
     </Card>
   );
 }
+
+    

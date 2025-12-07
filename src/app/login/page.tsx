@@ -51,6 +51,7 @@ const emailFormSchema = z.object({
 
 type EmailFormValues = z.infer<typeof emailFormSchema>;
 type AuthAction = 'signin' | 'signup';
+const OWNER_EMAIL = "pompomtamatar9832@gmail.com";
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -117,11 +118,13 @@ export default function LoginPage() {
   
   const createUserProfile = (user: User) => {
     const userRef = doc(firestore, 'users', user.uid);
+    const isOwner = user.email === OWNER_EMAIL;
+    
     setDocumentNonBlocking(userRef, {
       id: user.uid,
       email: user.email,
-      trialCount: 3,
-      hasPaid: false,
+      trialCount: isOwner ? Infinity : 3,
+      hasPaid: isOwner,
       createdAt: serverTimestamp(),
     }, { merge: true });
   }
@@ -292,3 +295,5 @@ export default function LoginPage() {
     </div>
   );
 }
+
+    
