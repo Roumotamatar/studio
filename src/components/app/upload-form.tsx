@@ -2,7 +2,7 @@
 
 import { useState, useRef, type ChangeEvent } from 'react';
 import Image from 'next/image';
-import { Camera, Loader2, Sparkles, X, ShieldAlert } from 'lucide-react';
+import { Camera, Loader2, Sparkles, X, ShieldAlert, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -160,7 +160,7 @@ export default function UploadForm({ onAnalysisStart, onAnalysisSuccess, onAnaly
                             </div>
                         </>
                         ) : (
-                        <>
+                        <div className="space-y-4">
                             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-200">
                                 <ShieldAlert className="h-8 w-8 text-gray-500" />
                             </div>
@@ -168,10 +168,20 @@ export default function UploadForm({ onAnalysisStart, onAnalysisSuccess, onAnaly
                                 <p className='font-semibold text-base text-gray-600'>No Trials Remaining</p>
                                 <p className="text-sm text-gray-500 mt-1">Please upgrade to a premium plan.</p>
                             </div>
-                        </>
+                        </div>
                         )}
                     </div>
                 </div>
+            )}
+            
+            {!canAnalyze && !userData?.hasPaid && (
+                <Button className="w-full" size="lg" onClick={() => {
+                    // Placeholder for payment logic
+                    alert("Redirecting to payment gateway...");
+                }}>
+                    <Zap className="mr-2 h-5 w-5" />
+                    Upgrade to Premium
+                </Button>
             )}
             
             <div className="flex items-center space-x-2">
