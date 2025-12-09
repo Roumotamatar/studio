@@ -184,7 +184,7 @@ export default function UploadForm({ onAnalysisStart, onAnalysisSuccess, onAnaly
             <div className="flex items-center space-x-2">
                 <Checkbox id="terms" checked={termsAgreed} onCheckedChange={(checked) => setTermsAgreed(checked as boolean)} />
                 <Label htmlFor="terms" className="text-sm text-gray-600">
-                    Check this box to indicate you have read and agree with our <a href="#" className="text-primary hover:underline">Terms & Conditions</a>
+                    Check this box to indicate you have read and agree with our <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Terms & Conditions</a>
                 </Label>
             </div>
 
@@ -211,5 +211,3 @@ export default function UploadForm({ onAnalysisStart, onAnalysisSuccess, onAnaly
     </div>
   );
 }
-
-    
