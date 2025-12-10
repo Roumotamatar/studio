@@ -32,24 +32,66 @@ export default function UploadForm({ onAnalysisStart, onAnalysisSuccess, onAnaly
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user, firestore } = useFirebase();
 
-  const handleImageChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const resizeAndCompressImage = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = document.createElement('img');
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 1024;
+          const MAX_HEIGHT = 1024;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            return reject(new Error('Could not get canvas context'));
+          }
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.8)); // Compress to 80% quality JPEG
+        };
+        img.onerror = reject;
+        img.src = event.target?.result as string;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleImageChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if(file.size > 16 * 1024 * 1024) {
-        onAnalysisError("Image size cannot exceed 16MB.");
-        return;
+      setIsAnalyzing(true); // Show feedback while processing
+      try {
+        const processedDataUrl = await resizeAndCompressImage(file);
+        setImagePreview(processedDataUrl);
+        // We don't need to store the original file anymore
+        setImageFile(new File([], "processed.jpg")); 
+      } catch (error) {
+        console.error("Image processing error:", error);
+        onAnalysisError("There was an error processing your image. Please try another one.");
+      } finally {
+        setIsAnalyzing(false);
       }
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
     }
   };
 
   const handleAnalyzeClick = async () => {
-    if (!imageFile || !imagePreview || !user || !userData) return;
+    if (!imagePreview || !user || !userData) return;
     
     if (!userData.hasPaid && userData.trialCount <= 0) {
       onAnalysisError('No trials remaining. Please upgrade to continue.');
@@ -60,6 +102,7 @@ export default function UploadForm({ onAnalysisStart, onAnalysisSuccess, onAnaly
     onAnalysisStart();
     
     try {
+      // imagePreview now holds the compressed base64 string
       const classificationResult = await classifyUploadedImage({ photoDataUri: imagePreview });
       if (!classificationResult?.diseaseClassification) {
         throw new Error('Could not classify the image.');
@@ -307,7 +350,7 @@ export default function UploadForm({ onAnalysisStart, onAnalysisSuccess, onAnaly
 
             <Button
                 onClick={handleAnalyzeClick}
-                disabled={!imageFile || isAnalyzing || !canAnalyze || !termsAgreed}
+                disabled={!imagePreview || isAnalyzing || !canAnalyze || !termsAgreed}
                 className="w-full text-lg font-bold bg-gradient-to-r from-primary to-teal-500 hover:from-primary/90 hover:to-teal-500/90 text-white shadow-lg disabled:bg-gray-400 disabled:shadow-none"
                 size="lg"
             >
