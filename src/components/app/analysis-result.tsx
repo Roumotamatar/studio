@@ -17,6 +17,7 @@ import type { AnalysisResultType } from '@/app/page';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import FollowUpChat from './follow-up-chat';
+import ProductChecker from './product-checker';
 
 interface AnalysisResultProps {
   result: AnalysisResultType;
@@ -56,7 +57,7 @@ export default function AnalysisResult({ result, imagePreview, onReset }: Analys
         <Tabs defaultValue="overview" className="w-full">
           <TabsList className="grid w-full grid-cols-2 bg-primary/10 rounded-lg">
             <TabsTrigger value="overview" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><Info className="mr-2 h-4 w-4" />Overview</TabsTrigger>
-            <TabsTrigger value="remedies" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><Sparkles className="mr-2 h-4 w-4" />Remedies</TabsTrigger>
+            <TabsTrigger value="remedies" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><Sparkles className="mr-2 h-4 w-4" />Remedies & Products</TabsTrigger>
           </TabsList>
           <TabsContent value="overview" className="mt-6">
             <div className="space-y-6">
@@ -87,7 +88,7 @@ export default function AnalysisResult({ result, imagePreview, onReset }: Analys
               </div>
             </div>
           </TabsContent>
-          <TabsContent value="remedies" className="mt-6">
+          <TabsContent value="remedies" className="mt-6 space-y-8">
              <div className="space-y-4 text-left">
               <h3 className="mb-4 text-2xl font-semibold text-foreground text-center">Suggested Remedies</h3>
                 <div className="flex flex-col gap-4">
@@ -106,6 +107,7 @@ export default function AnalysisResult({ result, imagePreview, onReset }: Analys
                   ))}
                 </div>
             </div>
+            <ProductChecker diagnosedCondition={result.classification} />
           </TabsContent>
         </Tabs>
         
