@@ -1,10 +1,10 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
-import { Loader2, Send, MessageSquarePlus } from 'lucide-react';
+import { Loader2, Send, MessageSquarePlus, MessageSquareQuestion } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { answerFollowUp } from '@/ai/flows/follow-up-chat';
 import { AnalysisResultType } from '@/app/page';
 import { cn } from '@/lib/utils';
@@ -20,6 +20,14 @@ interface Message {
   content: string;
 }
 
+const suggestedPrompts = [
+    'Is this condition common?',
+    'What are the typical symptoms?',
+    'Can you explain the remedies in simpler terms?',
+    'What lifestyle changes might help?',
+];
+
+
 export default function FollowUpChat({ analysisResult }: FollowUpChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -28,19 +36,18 @@ export default function FollowUpChat({ analysisResult }: FollowUpChatProps) {
 
   const diagnosisContext = `Condition: ${analysisResult.classification}, Severity: ${analysisResult.severity}, Suggested Remedies: ${analysisResult.remedies}`;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || isLoading) return;
+  const handleSendMessage = async (messageContent: string) => {
+    if (!messageContent.trim() || isLoading) return;
 
-    const userMessage: Message = { role: 'user', content: input };
+    const userMessage: Message = { role: 'user', content: messageContent };
     setMessages((prev) => [...prev, userMessage]);
-    setInput('');
     setIsLoading(true);
+    setInput(''); // Clear input after sending
 
     try {
       const result = await answerFollowUp({
         diagnosisContext,
-        userQuestion: input,
+        userQuestion: messageContent,
         chatHistory: messages,
       });
 
@@ -56,6 +63,11 @@ export default function FollowUpChat({ analysisResult }: FollowUpChatProps) {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleSendMessage(input);
   };
   
   useEffect(() => {
@@ -80,6 +92,9 @@ export default function FollowUpChat({ analysisResult }: FollowUpChatProps) {
           <MessageSquarePlus className="h-6 w-6" />
           Ask a Follow-up Question
         </CardTitle>
+        <CardDescription>
+            Use the prompts below or type your own question.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex flex-col space-y-4">
@@ -127,11 +142,30 @@ export default function FollowUpChat({ analysisResult }: FollowUpChatProps) {
               )}
             </div>
           </ScrollArea>
+           {messages.length === 0 && (
+                <div className="space-y-2">
+                     <p className="text-sm font-medium text-muted-foreground">Suggested Questions:</p>
+                    <div className="flex flex-wrap gap-2">
+                        {suggestedPrompts.map((prompt) => (
+                            <Button
+                                key={prompt}
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleSendMessage(prompt)}
+                                disabled={isLoading}
+                                className="text-xs h-auto py-1 px-2"
+                            >
+                                {prompt}
+                            </Button>
+                        ))}
+                    </div>
+                </div>
+            )}
           <form onSubmit={handleSubmit} className="flex items-start space-x-2">
             <Textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="e.g., 'Is this condition common?'"
+              placeholder="e.g., 'Is this condition contagious?'"
               className="flex-1 resize-none"
               rows={2}
               onKeyDown={(e) => {
