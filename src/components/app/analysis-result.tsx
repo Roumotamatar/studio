@@ -77,11 +77,11 @@ export default function AnalysisResult({ result, imagePreview, onReset }: Analys
                   </div>
                   <div className="rounded-lg border border-primary/20 bg-gradient-to-r from-primary/5 to-accent/5 p-6 text-center shadow-inner">
                     <h3 className="text-base font-medium text-muted-foreground flex items-center justify-center gap-2"><Thermometer className="h-4 w-4"/>Assessed Severity</h3>
-                    <p className="text-3xl font-bold text-primary">
+                    <div className="text-3xl font-bold text-primary">
                         <Badge variant="outline" className={cn("text-2xl px-4 py-1", severityStyles[result.severity])}>
                             {result.severity}
                         </Badge>
-                    </p>
+                    </div>
                   </div>
               </div>
             </div>
