@@ -11,9 +11,11 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertTriangle, RefreshCcw, Info, Sparkles, Pill, CheckCircle } from 'lucide-react';
+import { AlertTriangle, RefreshCcw, Info, Sparkles, Pill, Shield, Thermometer } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { AnalysisResultType } from '@/app/page';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 interface AnalysisResultProps {
   result: AnalysisResultType;
@@ -33,6 +35,12 @@ const formatRemedies = (remedies: string) => {
       return { title, description };
     });
 };
+
+const severityStyles = {
+  Mild: "bg-green-100 text-green-800 border-green-200",
+  Moderate: "bg-yellow-100 text-yellow-800 border-yellow-200",
+  Severe: "bg-red-100 text-red-800 border-red-200",
+}
 
 export default function AnalysisResult({ result, imagePreview, onReset }: AnalysisResultProps) {
   const remediesList = formatRemedies(result.remedies);
@@ -62,9 +70,19 @@ export default function AnalysisResult({ result, imagePreview, onReset }: Analys
                   />
                 </div>
               )}
-              <div className="rounded-lg border border-primary/20 bg-gradient-to-r from-primary/5 to-accent/5 p-6 text-center shadow-inner">
-                <h3 className="text-base font-medium text-muted-foreground">Detected Condition</h3>
-                <p className="text-3xl font-bold text-primary">{result.classification}</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="rounded-lg border border-primary/20 bg-gradient-to-r from-primary/5 to-accent/5 p-6 text-center shadow-inner">
+                    <h3 className="text-base font-medium text-muted-foreground flex items-center justify-center gap-2"><Shield className="h-4 w-4"/>Detected Condition</h3>
+                    <p className="text-3xl font-bold text-primary">{result.classification}</p>
+                  </div>
+                  <div className="rounded-lg border border-primary/20 bg-gradient-to-r from-primary/5 to-accent/5 p-6 text-center shadow-inner">
+                    <h3 className="text-base font-medium text-muted-foreground flex items-center justify-center gap-2"><Thermometer className="h-4 w-4"/>Assessed Severity</h3>
+                    <p className="text-3xl font-bold text-primary">
+                        <Badge variant="outline" className={cn("text-2xl px-4 py-1", severityStyles[result.severity])}>
+                            {result.severity}
+                        </Badge>
+                    </p>
+                  </div>
               </div>
             </div>
           </TabsContent>
@@ -108,5 +126,3 @@ export default function AnalysisResult({ result, imagePreview, onReset }: Analys
     </Card>
   );
 }
-
-    

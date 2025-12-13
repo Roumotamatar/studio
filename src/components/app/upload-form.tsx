@@ -11,6 +11,7 @@ import { useFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { classifyUploadedImage } from '@/ai/flows/classify-uploaded-image';
 import { suggestRemedies } from '@/ai/flows/suggest-remedies-for-detected-condition';
+import { assessSeverity } from '@/ai/flows/assess-severity';
 import type { AnalysisResultType } from '@/app/page';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose, DialogFooter } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -102,17 +103,27 @@ export default function UploadForm({ onAnalysisStart, onAnalysisSuccess, onAnaly
     onAnalysisStart();
     
     try {
-      // imagePreview now holds the compressed base64 string
       const classificationResult = await classifyUploadedImage({ photoDataUri: imagePreview });
       if (!classificationResult?.diseaseClassification) {
         throw new Error('Could not classify the image.');
       }
+      
+      const [remedyResult, severityResult] = await Promise.all([
+        suggestRemedies({
+          detectedCondition: classificationResult.diseaseClassification,
+        }),
+        assessSeverity({
+            photoDataUri: imagePreview,
+            condition: classificationResult.diseaseClassification,
+        }),
+      ]);
 
-      const remedyResult = await suggestRemedies({
-        detectedCondition: classificationResult.diseaseClassification,
-      });
       if (!remedyResult?.suggestedRemedies) {
         throw new Error('Could not generate remedies.');
+      }
+
+      if (!severityResult?.severity) {
+        throw new Error('Could not assess severity.');
       }
 
       let remainingTrials = userData.trialCount;
@@ -127,6 +138,7 @@ export default function UploadForm({ onAnalysisStart, onAnalysisSuccess, onAnaly
       const result: AnalysisResultType = {
         classification: classificationResult.diseaseClassification,
         remedies: remedyResult.suggestedRemedies,
+        severity: severityResult.severity,
         remainingTrials,
       }
 

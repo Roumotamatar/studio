@@ -20,6 +20,7 @@ export interface AnalysisResultType {
   classification: string;
   remedies: string;
   remainingTrials: number;
+  severity: 'Mild' | 'Moderate' | 'Severe';
 };
 type AnalysisState = 'idle' | 'loading' | 'success' | 'error';
 
@@ -219,5 +220,3 @@ export default function Home() {
     </div>
   );
 }
-
-    
