@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { AnalysisResultType } from '@/app/page';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import FollowUpChat from './follow-up-chat';
 
 interface AnalysisResultProps {
   result: AnalysisResultType;
@@ -107,6 +108,8 @@ export default function AnalysisResult({ result, imagePreview, onReset }: Analys
             </div>
           </TabsContent>
         </Tabs>
+        
+        <FollowUpChat analysisResult={result} />
 
         <Alert variant="default" className="bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800 rounded-lg">
           <AlertTriangle className="h-4 w-4 !text-yellow-600 dark:!text-yellow-400" />
