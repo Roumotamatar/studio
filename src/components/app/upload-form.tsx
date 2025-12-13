@@ -118,8 +118,8 @@ export default function UploadForm({ onAnalysisStart, onAnalysisSuccess, onAnaly
         }),
       ]);
 
-      if (!remedyResult?.suggestedRemedies) {
-        throw new Error('Could not generate remedies.');
+      if (!remedyResult) {
+        throw new Error('Could not generate recommendations.');
       }
 
       if (!severityResult?.severity) {
@@ -137,7 +137,9 @@ export default function UploadForm({ onAnalysisStart, onAnalysisSuccess, onAnaly
       
       const result: AnalysisResultType = {
         classification: classificationResult.diseaseClassification,
-        remedies: remedyResult.suggestedRemedies,
+        remedies: remedyResult.remedies,
+        routine: remedyResult.routine,
+        lifestyle: remedyResult.lifestyle,
         severity: severityResult.severity,
         remainingTrials,
       }
@@ -264,7 +266,7 @@ export default function UploadForm({ onAnalysisStart, onAnalysisSuccess, onAnaly
                                 <h2>2. No Medical Advice Disclaimer</h2>
                                 <p>2.1 All information provided by SkinWise—including disease likelihoods, possible conditions, and suggested remedies—is for informational and educational purposes only.</p>
                                 <p>2.2 The AI results must not be considered a medical diagnosis.</p>
-                                <p>2.3 You should always consult a licensed dermatologist, doctor, or medical professional for any concerns related to your skin, health, or well-being.</p>
+                                <p>2.3 You should always consult a licensed dermatologist, doctor, or medical professional for any concerns related to your skin, or well-being.</p>
                                 <p>2.4 You understand that SkinWise does not hold any medical certifications, licenses, or permits, and is not legally authorized to practice medicine.</p>
 
                                 <h2>3. User Responsibilities</h2>

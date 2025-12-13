@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertTriangle, RefreshCcw, Info, Sparkles, Pill, Shield, Thermometer } from 'lucide-react';
+import { AlertTriangle, RefreshCcw, Info, Sparkles, Pill, Shield, Thermometer, Sun, Moon, Utensils } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { AnalysisResultType } from '@/app/page';
 import { Badge } from '@/components/ui/badge';
@@ -25,19 +25,6 @@ interface AnalysisResultProps {
   onReset: () => void;
 }
 
-const formatRemedies = (remedies: string) => {
-  return remedies
-    .split('\n')
-    .map(line => line.trim().replace(/^(-|\*|\d+\.)/, '').trim())
-    .filter(line => line.length > 0)
-    .map(line => {
-      const parts = line.split(':');
-      const title = parts[0].trim();
-      const description = parts.slice(1).join(':').trim();
-      return { title, description };
-    });
-};
-
 const severityStyles = {
   Mild: "bg-green-100 text-green-800 border-green-200",
   Moderate: "bg-yellow-100 text-yellow-800 border-yellow-200",
@@ -45,7 +32,6 @@ const severityStyles = {
 }
 
 export default function AnalysisResult({ result, imagePreview, onReset }: AnalysisResultProps) {
-  const remediesList = formatRemedies(result.remedies);
 
   return (
     <Card className="w-full max-w-3xl animate-in fade-in-50 slide-in-from-bottom-5 duration-700 shadow-2xl bg-background/80 backdrop-blur-sm border-2 border-white">
@@ -57,7 +43,7 @@ export default function AnalysisResult({ result, imagePreview, onReset }: Analys
         <Tabs defaultValue="overview" className="w-full">
           <TabsList className="grid w-full grid-cols-2 bg-primary/10 rounded-lg">
             <TabsTrigger value="overview" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><Info className="mr-2 h-4 w-4" />Overview</TabsTrigger>
-            <TabsTrigger value="remedies" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><Sparkles className="mr-2 h-4 w-4" />Remedies & Products</TabsTrigger>
+            <TabsTrigger value="remedies" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><Sparkles className="mr-2 h-4 w-4" />Recommendations</TabsTrigger>
           </TabsList>
           <TabsContent value="overview" className="mt-6">
             <div className="space-y-6">
@@ -80,7 +66,7 @@ export default function AnalysisResult({ result, imagePreview, onReset }: Analys
                   <div className="rounded-lg border border-primary/20 bg-gradient-to-r from-primary/5 to-accent/5 p-6 text-center shadow-inner">
                     <h3 className="text-base font-medium text-muted-foreground flex items-center justify-center gap-2"><Thermometer className="h-4 w-4"/>Assessed Severity</h3>
                     <div className="text-3xl font-bold text-primary">
-                        <Badge variant="outline" className={cn("text-2xl px-4 py-1", severityStyles[result.severity])}>
+                        <Badge className={cn("text-2xl px-4 py-1", severityStyles[result.severity])}>
                             {result.severity}
                         </Badge>
                     </div>
@@ -92,7 +78,7 @@ export default function AnalysisResult({ result, imagePreview, onReset }: Analys
              <div className="space-y-4 text-left">
               <h3 className="mb-4 text-2xl font-semibold text-foreground text-center">Suggested Remedies</h3>
                 <div className="flex flex-col gap-4">
-                  {remediesList.map((remedy, index) => (
+                  {result.remedies.map((remedy, index) => (
                     <Card key={index} className="bg-white/70">
                       <CardHeader className="flex flex-row items-center gap-3 space-y-0 p-4">
                         <div className="p-2 bg-accent/20 rounded-full">
@@ -107,6 +93,46 @@ export default function AnalysisResult({ result, imagePreview, onReset }: Analys
                   ))}
                 </div>
             </div>
+            
+            <Card className="bg-primary/5 border-primary/20">
+                <CardHeader>
+                    <CardTitle className="text-2xl font-semibold text-foreground text-center">Daily Routine</CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-3">
+                        <h4 className="flex items-center gap-2 font-semibold text-lg text-primary"><Sun className="h-5 w-5 text-orange-400"/>Morning (AM)</h4>
+                        <ul className="space-y-2 list-disc list-inside text-foreground/80">
+                            {result.routine.am.map((step, index) => <li key={`am-${index}`}>{step}</li>)}
+                        </ul>
+                    </div>
+                    <div className="space-y-3">
+                        <h4 className="flex items-center gap-2 font-semibold text-lg text-primary"><Moon className="h-5 w-5 text-blue-400"/>Evening (PM)</h4>
+                         <ul className="space-y-2 list-disc list-inside text-foreground/80">
+                            {result.routine.pm.map((step, index) => <li key={`pm-${index}`}>{step}</li>)}
+                        </ul>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <div className="space-y-4 text-left">
+              <h3 className="mb-4 text-2xl font-semibold text-foreground text-center">Diet & Lifestyle Tips</h3>
+                <div className="flex flex-col gap-4">
+                  {result.lifestyle.map((tip, index) => (
+                    <Card key={index} className="bg-white/70">
+                      <CardHeader className="flex flex-row items-center gap-3 space-y-0 p-4">
+                        <div className="p-2 bg-green-500/20 rounded-full">
+                           <Utensils className="h-5 w-5 text-green-600" />
+                        </div>
+                        <CardTitle className="text-lg">{tip.title}</CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-4 pt-0 text-foreground/80">
+                        {tip.description || "No further details provided."}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+            </div>
+
             <ProductChecker diagnosedCondition={result.classification} />
           </TabsContent>
         </Tabs>

@@ -4,7 +4,7 @@
  *
  * - suggestRemedies - A function that takes a detected skin condition and suggests remedies.
  * - SuggestRemediesInput - The input type for the suggestRemedies function.
- * - SuggestRemediesOutput - The output type for the suggestRemedies function.
+ * - SuggestRemediesOutput - The return type for the suggestRemedies function.
  */
 
 import {ai} from '@/ai/genkit';
@@ -19,10 +19,20 @@ const SuggestRemediesInputSchema = z.object({
 export type SuggestRemediesInput = z.infer<typeof SuggestRemediesInputSchema>;
 
 const SuggestRemediesOutputSchema = z.object({
-  suggestedRemedies: z
-    .string()
-    .describe('A list of possible remedies and treatments for the detected skin condition.'),
+  remedies: z.array(z.object({
+    title: z.string().describe("The concise name of the remedy or treatment."),
+    description: z.string().describe("A brief explanation of the remedy.")
+  })).describe("A list of suggested over-the-counter treatments or home remedies."),
+  routine: z.object({
+    am: z.array(z.string()).describe("A list of morning skincare routine steps (e.g., 'Gentle Cleanser', 'Moisturizer', 'Sunscreen SPF 30+')."),
+    pm: z.array(z.string()).describe("A list of evening skincare routine steps (e.g., 'Cleanser', 'Treatment Serum', 'Night Cream').")
+  }).describe("A sample daily skincare routine tailored to the condition."),
+  lifestyle: z.array(z.object({
+    title: z.string().describe("The concise name of the lifestyle tip."),
+    description: z.string().describe("A brief explanation of the diet or lifestyle recommendation.")
+  })).describe("A list of diet and lifestyle recommendations that may help manage the condition."),
 });
+
 
 export type SuggestRemediesOutput = z.infer<typeof SuggestRemediesOutputSchema>;
 
@@ -30,10 +40,15 @@ const suggestRemediesPrompt = ai.definePrompt({
   name: 'suggestRemediesPrompt',
   input: {schema: SuggestRemediesInputSchema},
   output: {schema: SuggestRemediesOutputSchema},
-  system: `You are a helpful dermatology assistant. You will suggest remedies and treatments for the detected skin condition.`,
+  system: `You are a helpful dermatology assistant. You will suggest remedies, a daily routine, and lifestyle changes for the detected skin condition.`,
   prompt: `Detected Skin Condition: {{{detectedCondition}}}
   
-  Provide a list of suggested remedies and treatments for the condition above. If the condition sounds severe, include a note about seeking professional medical advice for severe cases.`,
+  Based on the condition above, provide a structured response including:
+  1.  A list of suggested over-the-counter remedies and treatments.
+  2.  A simple, tailored AM (morning) and PM (evening) skincare routine.
+  3.  A list of relevant diet and lifestyle recommendations.
+
+  If the condition sounds severe, include a note in the remedies about seeking professional medical advice.`,
 });
 
 

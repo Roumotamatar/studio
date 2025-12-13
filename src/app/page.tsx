@@ -14,10 +14,10 @@ import UploadForm from '@/components/app/upload-form';
 import LoadingIndicator from '@/components/app/loading-indicator';
 import AnalysisResult from '@/components/app/analysis-result';
 import ErrorDisplay from '@/components/app/error-display';
+import { SuggestRemediesOutput } from '@/ai/flows/suggest-remedies-for-detected-condition';
 
-export interface AnalysisResultType {
+export interface AnalysisResultType extends SuggestRemediesOutput {
   classification: string;
-  remedies: string;
   remainingTrials: number;
   severity: 'Mild' | 'Moderate' | 'Severe';
 };
