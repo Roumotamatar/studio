@@ -12,7 +12,7 @@ const fontSans = FontSans({
 
 
 export const metadata: Metadata = {
-  title: 'SkinWise',
+  title: 'Skineminence',
   description: 'AI-powered skin disease detection and remedy suggestion.',
 };
 

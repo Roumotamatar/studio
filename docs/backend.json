@@ -4,7 +4,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "User",
       "type": "object",
-      "description": "Represents a user of the SkinWise application.",
+      "description": "Represents a user of the Skineminence application.",
       "properties": {
         "id": {
           "type": "string",
@@ -242,6 +242,6 @@
         }
       }
     ],
-    "reasoning": "The Firestore data structure is designed to support the SkinWise application's core features: image upload, disease classification, and remedy suggestion.  The structure emphasizes authorization independence and facilitates secure list operations by leveraging path-based ownership for user-specific data. The root `/users/{userId}` collection stores user profiles, ensuring that user data is isolated and only accessible by the authenticated user. The `skinImages` subcollection stores images uploaded by the user. Each image is associated with a diagnosis and remedies. This structure provides a clear path-based ownership model, enhancing security and simplifying rules. No `get()` calls are required in security rules. The structure facilitates QAPs, as list operations are naturally scoped to the user. All documents within a collection share the same security requirements (homogeneous security posture). The `userId` is used to scope all data, allowing for simple rules such as `request.auth.uid == userId`. It includes the use of nested collections to represent one-to-many relationships, such as a user having multiple skin images and each diagnosis having multiple remedies."
+    "reasoning": "The Firestore data structure is designed to support the Skineminence application's core features: image upload, disease classification, and remedy suggestion.  The structure emphasizes authorization independence and facilitates secure list operations by leveraging path-based ownership for user-specific data. The root `/users/{userId}` collection stores user profiles, ensuring that user data is isolated and only accessible by the authenticated user. The `skinImages` subcollection stores images uploaded by the user. Each image is associated with a diagnosis and remedies. This structure provides a clear path-based ownership model, enhancing security and simplifying rules. No `get()` calls are required in security rules. The structure facilitates QAPs, as list operations are naturally scoped to the user. All documents within a collection share the same security requirements (homogeneous security posture). The `userId` is used to scope all data, allowing for simple rules such as `request.auth.uid == userId`. It includes the use of nested collections to represent one-to-many relationships, such as a user having multiple skin images and each diagnosis having multiple remedies."
   }
 }

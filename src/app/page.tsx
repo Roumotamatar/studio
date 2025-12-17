@@ -213,7 +213,7 @@ export default function Home() {
       <footer className="w-full py-6">
         <div className="container mx-auto px-4 text-center text-sm text-gray-700">
           <p>
-            SkinWise is an AI-powered tool and does not provide medical advice.
+            Skineminence is an AI-powered tool and does not provide medical advice.
             Consult a healthcare professional for any health concerns.
           </p>
         </div>
