@@ -173,7 +173,9 @@ export default function LoginPage() {
     provider.setCustomParameters({
       'prompt': 'select_account'
     });
-    auth.tenantId = firebaseConfig.authDomain;
+    // Set the auth domain to ensure correct redirect behavior
+    auth.tenantId = null;
+    auth.config.authDomain = firebaseConfig.authDomain;
 
     const onSuccess = (userCredential: any) => {
       createUserProfile(userCredential.user);
@@ -308,3 +310,4 @@ export default function LoginPage() {
     
 
     
+
