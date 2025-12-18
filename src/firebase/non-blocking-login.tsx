@@ -53,14 +53,10 @@ export function initiateEmailSignIn(
 /** Initiate Google sign-in (non-blocking). */
 export function initiateGoogleSignIn(
   authInstance: Auth,
+  provider: GoogleAuthProvider,
   onSuccess?: SuccessCallback,
   onError?: ErrorCallback
 ): void {
-  const provider = new GoogleAuthProvider();
-  // This parameter helps link accounts with the same verified email.
-  provider.setCustomParameters({
-    'prompt': 'select_account'
-  });
   signInWithPopup(authInstance, provider)
     .then(onSuccess)
     .catch(onError);

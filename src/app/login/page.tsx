@@ -34,6 +34,8 @@ import { FirebaseError } from 'firebase/app';
 import { Separator } from '@/components/ui/separator';
 import { doc, serverTimestamp } from 'firebase/firestore';
 import { sendEmailVerification, User } from 'firebase/auth';
+import { GoogleAuthProvider } from 'firebase/auth';
+import { firebaseConfig } from '@/firebase/config';
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="24px" height="24px" {...props}>
@@ -166,11 +168,18 @@ export default function LoginPage() {
 
   const handleGoogleSignIn = () => {
     setIsGoogleLoading(true);
+    
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({
+      'prompt': 'select_account'
+    });
+    auth.tenantId = firebaseConfig.authDomain;
+
     const onSuccess = (userCredential: any) => {
       createUserProfile(userCredential.user);
       setIsGoogleLoading(false)
     };
-    initiateGoogleSignIn(auth, onSuccess, (err) => handleAuthError(err, true));
+    initiateGoogleSignIn(auth, provider, onSuccess, (err) => handleAuthError(err, true));
   };
   
   const renderEmailForm = () => (
